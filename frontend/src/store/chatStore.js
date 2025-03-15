@@ -1,9 +1,8 @@
-// frontend/src/store/chatStore.js - Correction des URL pour éviter les redirections 307
-
+// src/store/chatStore.js
 import { atom, map } from 'nanostores';
 import api from '../api/config';
 
-// Stores pour les chats
+// Stores for chats
 export const chats = atom([]);
 export const currentChat = map({
   id: null,
@@ -13,43 +12,41 @@ export const currentChat = map({
   isLoading: false
 });
 
-// Modèles disponibles
+// Available models
 export const models = atom([]);
 export const selectedModel = atom('gpt-3.5-turbo');
 
-// Fonctions pour obtenir les chats
+// Fetch all chats
 export const fetchChats = async () => {
   try {
-    // S'assurer que l'URL se termine par un slash pour éviter les redirections 307
-    const response = await api.get('chat/').json();
+    const response = await api.get('chat').json();
     chats.set(response);
     return response;
   } catch (error) {
-    console.error('Erreur lors de la récupération des chats:', error);
+    console.error('Error fetching chats:', error);
     return [];
   }
 };
 
-// Fonction pour créer un nouveau chat
+// Create a new chat
 export const createChat = async (model = 'gpt-3.5-turbo', systemPrompt = null) => {
   try {
     currentChat.setKey('isLoading', true);
     
     const data = {
-      title: 'Nouvelle conversation',
+      title: 'New conversation',
       model,
       system_prompt: systemPrompt
     };
     
-    // S'assurer que l'URL se termine par un slash
-    const response = await api.post('chat/', { json: data }).json();
+    const response = await api.post('chat', { json: data }).json();
     const newChat = response;
     
-    // Mettre à jour la liste des chats
+    // Update chats list
     const currentChats = chats.get();
     chats.set([newChat, ...currentChats]);
     
-    // Mettre à jour le chat actuel
+    // Update current chat
     currentChat.set({
       id: newChat.id,
       title: newChat.title,
@@ -60,19 +57,18 @@ export const createChat = async (model = 'gpt-3.5-turbo', systemPrompt = null) =
     
     return newChat;
   } catch (error) {
-    console.error('Erreur lors de la création du chat:', error);
+    console.error('Error creating chat:', error);
     currentChat.setKey('isLoading', false);
     throw error;
   }
 };
 
-// Fonction pour obtenir un chat et ses messages
+// Fetch a specific chat and its messages
 export const fetchChat = async (chatId) => {
   try {
     currentChat.setKey('isLoading', true);
     
-    // S'assurer que l'URL se termine par un slash
-    const response = await api.get(`chat/${chatId}/`).json();
+    const response = await api.get(`chat/${chatId}`).json();
     const chatData = response;
     
     currentChat.set({
@@ -85,21 +81,21 @@ export const fetchChat = async (chatId) => {
     
     return chatData;
   } catch (error) {
-    console.error(`Erreur lors de la récupération du chat ${chatId}:`, error);
+    console.error(`Error fetching chat ${chatId}:`, error);
     currentChat.setKey('isLoading', false);
     throw error;
   }
 };
 
-// Fonction pour envoyer un message
-export const sendMessage = async (content) => {
+// Send a message
+export const sendMessage = async (content, streaming = false) => {
   const chatId = currentChat.get().id;
   if (!chatId) return null;
   
   try {
     currentChat.setKey('isLoading', true);
     
-    // Ajouter le message de l'utilisateur localement
+    // Add user message locally
     const userMessage = {
       id: `temp-${Date.now()}`,
       role: 'user',
@@ -110,48 +106,53 @@ export const sendMessage = async (content) => {
     const currentMessages = currentChat.get().messages;
     currentChat.setKey('messages', [...currentMessages, userMessage]);
     
-    // Envoyer le message à l'API
-    // Mode standard (non-streaming)
+    // Prepare message data
     const messageData = {
       role: 'user',
       content
     };
     
-    // S'assurer que l'URL se termine par un slash
-    const response = await api.post(`chat/${chatId}/messages/`, { json: messageData }).json();
-    const assistantResponse = response;
+    let endpoint = streaming ? `chat/${chatId}/messages/stream` : `chat/${chatId}/messages`;
     
-    // Ajouter la réponse de l'assistant
-    const assistantMessage = {
-      id: assistantResponse.id,
-      role: 'assistant',
-      content: assistantResponse.content,
-      created_at: assistantResponse.created_at
-    };
-    
-    currentChat.setKey('messages', [...currentChat.get().messages, assistantMessage]);
-    currentChat.setKey('isLoading', false);
-    
-    return assistantMessage;
-
+    // Send message to API (non-streaming mode)
+    if (!streaming) {
+      const response = await api.post(endpoint, { json: messageData }).json();
+      const assistantResponse = response;
+      
+      // Add assistant response
+      const assistantMessage = {
+        id: assistantResponse.id,
+        role: 'assistant',
+        content: assistantResponse.content,
+        created_at: assistantResponse.created_at
+      };
+      
+      currentChat.setKey('messages', [...currentChat.get().messages, assistantMessage]);
+      currentChat.setKey('isLoading', false);
+      
+      return assistantMessage;
+    } else {
+      // TODO: Implement streaming logic if needed
+      // For now, just use non-streaming approach
+      return await sendMessage(content, false);
+    }
   } catch (error) {
-    console.error('Erreur lors de l\'envoi du message:', error);
+    console.error('Error sending message:', error);
     currentChat.setKey('isLoading', false);
     throw error;
   }
 };
 
-// Fonction pour supprimer un chat
+// Delete a chat
 export const deleteChat = async (chatId) => {
   try {
-    // S'assurer que l'URL se termine par un slash
-    await api.delete(`chat/${chatId}/`);
+    await api.delete(`chat/${chatId}`);
     
-    // Mettre à jour la liste des chats
+    // Update chats list
     const updatedChats = chats.get().filter(chat => chat.id !== chatId);
     chats.set(updatedChats);
     
-    // Si le chat supprimé était le chat actuel, réinitialiser le chat actuel
+    // Reset current chat if it was the deleted one
     if (currentChat.get().id === chatId) {
       currentChat.set({
         id: null,
@@ -164,20 +165,19 @@ export const deleteChat = async (chatId) => {
     
     return true;
   } catch (error) {
-    console.error(`Erreur lors de la suppression du chat ${chatId}:`, error);
+    console.error(`Error deleting chat ${chatId}:`, error);
     throw error;
   }
 };
 
-// Fonction pour obtenir les modèles disponibles
+// Fetch available models
 export const fetchModels = async () => {
   try {
-    // S'assurer que l'URL se termine par un slash
-    const response = await api.get('models/').json();
+    const response = await api.get('models').json();
     models.set(response);
     return response;
   } catch (error) {
-    console.error('Erreur lors de la récupération des modèles:', error);
+    console.error('Error fetching models:', error);
     return [];
   }
 };

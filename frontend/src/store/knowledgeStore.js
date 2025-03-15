@@ -1,13 +1,14 @@
+// src/store/knowledgeStore.js
 import { atom } from 'nanostores';
 import api from '../api/config';
 
-// Store pour les connaissances
+// Store for knowledge base
 export const documents = atom([]);
 export const isLoadingDocuments = atom(false);
 export const searchResults = atom([]);
 export const isSearching = atom(false);
 
-// Fonction pour récupérer les documents
+// Fetch documents
 export const fetchDocuments = async () => {
   try {
     isLoadingDocuments.set(true);
@@ -16,13 +17,13 @@ export const fetchDocuments = async () => {
     isLoadingDocuments.set(false);
     return response;
   } catch (error) {
-    console.error('Erreur lors de la récupération des documents:', error);
+    console.error('Error fetching documents:', error);
     isLoadingDocuments.set(false);
     return [];
   }
 };
 
-// Fonction pour uploader un document
+// Upload a document
 export const uploadDocument = async (title, file) => {
   try {
     isLoadingDocuments.set(true);
@@ -33,44 +34,44 @@ export const uploadDocument = async (title, file) => {
 
     const response = await api.post('knowledge/documents', { body: formData }).json();
 
-    // Mettre à jour la liste des documents
+    // Update documents list
     const currentDocs = documents.get();
     documents.set([response, ...currentDocs]);
 
     isLoadingDocuments.set(false);
     return response;
   } catch (error) {
-    console.error('Erreur lors de l\'upload du document:', error);
+    console.error('Error uploading document:', error);
     isLoadingDocuments.set(false);
     throw error;
   }
 };
 
-// Fonction pour supprimer un document
+// Delete a document
 export const deleteDocument = async (documentId) => {
   try {
     isLoadingDocuments.set(true);
-    await api.delete(`knowledge/documents/${documentId}`);
+    await api.delete(`knowledge/documents/${documentId}/`);
 
-    // Mettre à jour la liste des documents
+    // Update documents list
     const updatedDocs = documents.get().filter(doc => doc.id !== documentId);
     documents.set(updatedDocs);
     
     isLoadingDocuments.set(false);
     return true;
   } catch (error) {
-    console.error(`Erreur lors de la suppression du document ${documentId}:`, error);
+    console.error(`Error deleting document ${documentId}:`, error);
     isLoadingDocuments.set(false);
     throw error;
   }
 };
 
-// Fonction pour télécharger un document
+// Download a document
 export const downloadDocument = (documentId) => {
   window.open(`/api/knowledge/documents/${documentId}/download`, '_blank');
 };
 
-// Fonction pour rechercher dans les documents
+// Search documents
 export const searchDocuments = async (query, limit = 5) => {
   try {
     isSearching.set(true);
@@ -86,7 +87,7 @@ export const searchDocuments = async (query, limit = 5) => {
     isSearching.set(false);
     return response;
   } catch (error) {
-    console.error('Erreur lors de la recherche dans les documents:', error);
+    console.error('Error searching documents:', error);
     isSearching.set(false);
     return [];
   }

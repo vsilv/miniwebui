@@ -7,14 +7,15 @@ import { isAuthenticated, register, login } from '../store/authStore';
 const Register = () => {
   const navigate = useNavigate();
   const $isAuthenticated = useStore(isAuthenticated);
+  
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Rediriger si déjà authentifié
+  // Redirect if already authenticated
   useEffect(() => {
     if ($isAuthenticated) {
       navigate('/');
@@ -24,49 +25,45 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validation simple
+    // Form validation
     if (!username || !email || !password || !passwordConfirm) {
-      setError('Veuillez remplir tous les champs');
+      setError('Please fill in all fields');
       return;
     }
     
     if (password !== passwordConfirm) {
-      setError('Les mots de passe ne correspondent pas');
+      setError('Passwords do not match');
       return;
     }
     
     if (password.length < 6) {
-      setError('Le mot de passe doit contenir au moins 6 caractères');
+      setError('Password must be at least 6 characters long');
       return;
     }
     
-    try {
-      setIsLoading(true);
-      setError('');
+    setError('');
+    setIsSubmitting(true);
+    
+    // Register user
+    const result = await register(username, email, password);
+    
+    if (result.success) {
+      toast.success('Registration successful');
       
-      // Créer le compte
-      const result = await register(username, email, password);
+      // Auto-login
+      const loginResult = await login(email, password);
       
-      if (result.success) {
-        // Connexion automatique
-        const loginResult = await login(email, password);
-        
-        if (loginResult.success) {
-          toast.success('Compte créé avec succès');
-          navigate('/');
-        } else {
-          toast.success('Compte créé. Veuillez vous connecter.');
-          navigate('/login');
-        }
+      if (loginResult.success) {
+        navigate('/');
       } else {
-        setError(result.error || 'Erreur lors de la création du compte');
+        // If auto-login fails, redirect to login page
+        navigate('/login');
       }
-    } catch (err) {
-      setError('Une erreur est survenue. Veuillez réessayer.');
-      console.error('Register error:', err);
-    } finally {
-      setIsLoading(false);
+    } else {
+      setError(result.error || 'Registration failed');
     }
+    
+    setIsSubmitting(false);
   };
 
   return (
@@ -77,7 +74,7 @@ const Register = () => {
             MiniWebUI
           </h1>
           <h2 className="mt-6 text-center text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Créer un compte
+            Create an account
           </h2>
         </div>
         
@@ -90,7 +87,7 @@ const Register = () => {
           
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
-              <label htmlFor="username" className="sr-only">Nom d'utilisateur</label>
+              <label htmlFor="username" className="sr-only">Username</label>
               <input
                 id="username"
                 name="username"
@@ -100,11 +97,11 @@ const Register = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-dark-600 placeholder-gray-500 text-gray-900 dark:text-gray-100 dark:bg-dark-700 rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-                placeholder="Nom d'utilisateur"
+                placeholder="Username"
               />
             </div>
             <div>
-              <label htmlFor="email" className="sr-only">Adresse email</label>
+              <label htmlFor="email" className="sr-only">Email address</label>
               <input
                 id="email"
                 name="email"
@@ -114,11 +111,11 @@ const Register = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-dark-600 placeholder-gray-500 text-gray-900 dark:text-gray-100 dark:bg-dark-700 focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-                placeholder="Adresse email"
+                placeholder="Email address"
               />
             </div>
             <div>
-              <label htmlFor="password" className="sr-only">Mot de passe</label>
+              <label htmlFor="password" className="sr-only">Password</label>
               <input
                 id="password"
                 name="password"
@@ -128,11 +125,11 @@ const Register = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-dark-600 placeholder-gray-500 text-gray-900 dark:text-gray-100 dark:bg-dark-700 focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-                placeholder="Mot de passe"
+                placeholder="Password"
               />
             </div>
             <div>
-              <label htmlFor="password-confirm" className="sr-only">Confirmer le mot de passe</label>
+              <label htmlFor="password-confirm" className="sr-only">Confirm password</label>
               <input
                 id="password-confirm"
                 name="password-confirm"
@@ -142,7 +139,7 @@ const Register = () => {
                 value={passwordConfirm}
                 onChange={(e) => setPasswordConfirm(e.target.value)}
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-dark-600 placeholder-gray-500 text-gray-900 dark:text-gray-100 dark:bg-dark-700 rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-                placeholder="Confirmer le mot de passe"
+                placeholder="Confirm password"
               />
             </div>
           </div>
@@ -150,18 +147,18 @@ const Register = () => {
           <div>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isSubmitting}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Création en cours...' : 'Créer un compte'}
+              {isSubmitting ? 'Creating account...' : 'Sign up'}
             </button>
           </div>
           
           <div className="text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Déjà un compte ?{' '}
+              Already have an account?{' '}
               <Link to="/login" className="font-medium text-primary-600 dark:text-primary-400 hover:underline">
-                Se connecter
+                Sign in
               </Link>
             </p>
           </div>

@@ -12,7 +12,7 @@ from app.core.config import settings
 
 router = APIRouter(prefix="/models", tags=["models"])
 
-@router.get("/", response_model=List[Model])
+@router.get("", response_model=List[Model])
 async def list_models(current_user: User = Depends(get_current_active_user)):
     """
     Récupère la liste des modèles disponibles.
@@ -28,7 +28,7 @@ async def list_models(current_user: User = Depends(get_current_active_user)):
     
     return [Model(**model) for model in result.hits]
 
-@router.post("/", response_model=Model)
+@router.post("", response_model=Model)
 async def create_model(
     model_data: ModelCreate,
     current_user: User = Depends(get_current_active_user)

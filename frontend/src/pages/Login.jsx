@@ -2,17 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '@nanostores/react';
 import { toast } from 'react-hot-toast';
-import { isAuthenticated, login } from '../store/authStore';
+import { isAuthenticated, isLoading, login } from '../store/authStore';
 
 const Login = () => {
   const navigate = useNavigate();
   const $isAuthenticated = useStore(isAuthenticated);
+  const $isLoading = useStore(isLoading);
+  
+  // Initial default values are just for development convenience
   const [email, setEmail] = useState('admin@admin.com');
   const [password, setPassword] = useState('adminadmin');
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Rediriger si déjà authentifié
+  // Redirect if already authenticated
   useEffect(() => {
     if ($isAuthenticated) {
       navigate('/');
@@ -22,33 +24,21 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validation simple
+    // Simple validation
     if (!email || !password) {
-      setError('Veuillez remplir tous les champs');
+      setError('Please fill in all fields');
       return;
     }
     
-    try {
-      setIsLoading(true);
-      setError('');
-      
-      console.log('Tentative de connexion avec:', { email }); // Ne pas logger le mot de passe
-      
-      const result = await login(email, password);
-      
-      console.log('Résultat de connexion:', result);
-      
-      if (result.success) {
-        toast.success('Connexion réussie');
-        navigate('/');
-      } else {
-        setError(result.error || 'Email ou mot de passe incorrect');
-      }
-    } catch (err) {
-      console.error('Login error:', err);
-      setError('Une erreur est survenue. Veuillez réessayer.');
-    } finally {
-      setIsLoading(false);
+    setError('');
+    
+    const result = await login(email, password);
+    
+    if (result.success) {
+      toast.success('Login successful');
+      navigate('/');
+    } else {
+      setError(result.error || 'Login failed');
     }
   };
 
@@ -60,7 +50,7 @@ const Login = () => {
             MiniWebUI
           </h1>
           <h2 className="mt-6 text-center text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Connexion
+            Sign in to your account
           </h2>
         </div>
         
@@ -73,7 +63,7 @@ const Login = () => {
           
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
-              <label htmlFor="email" className="sr-only">Adresse email</label>
+              <label htmlFor="email" className="sr-only">Email address</label>
               <input
                 id="email"
                 name="email"
@@ -83,11 +73,11 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-dark-600 placeholder-gray-500 text-gray-900 dark:text-gray-100 dark:bg-dark-700 rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-                placeholder="Adresse email"
+                placeholder="Email address"
               />
             </div>
             <div>
-              <label htmlFor="password" className="sr-only">Mot de passe</label>
+              <label htmlFor="password" className="sr-only">Password</label>
               <input
                 id="password"
                 name="password"
@@ -97,7 +87,7 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-dark-600 placeholder-gray-500 text-gray-900 dark:text-gray-100 dark:bg-dark-700 rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-                placeholder="Mot de passe"
+                placeholder="Password"
               />
             </div>
           </div>
@@ -105,18 +95,18 @@ const Login = () => {
           <div>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={$isLoading}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Connexion en cours...' : 'Se connecter'}
+              {$isLoading ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
           
           <div className="text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Pas encore de compte ?{' '}
+              Don't have an account?{' '}
               <Link to="/register" className="font-medium text-primary-600 dark:text-primary-400 hover:underline">
-                S'inscrire
+                Sign up
               </Link>
             </p>
           </div>

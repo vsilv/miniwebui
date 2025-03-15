@@ -11,6 +11,9 @@ from app.models.user import TokenData, User, UserInDB
 from app.db.meilisearch import get_meilisearch_client
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+SECRET_KEY = "votre-secret-key"  # À sécuriser dans les variables d'environnement
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # par exemple 7 jours
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
 def verify_password(plain_password, hashed_password):

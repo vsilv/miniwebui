@@ -1,15 +1,18 @@
-// frontend/src/store/authStore.js
+// src/store/authStore.js
 import { atom } from 'nanostores';
-import api from '../api/config';
+import { loginUser, registerUser, getCurrentUser } from '../api/auth';
 
-// Store pour l'authentification
+// Auth state atoms
 export const user = atom(null);
 export const isAuthenticated = atom(false);
 export const isLoading = atom(true);
 
-// Vérifier l'authentification au chargement
+/**
+ * Check if user is authenticated by verifying token and fetching user data
+ * @returns {Promise<boolean>} Authentication status
+ */
 export const checkAuth = async () => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('auth_token');
   
   if (!token) {
     isAuthenticated.set(false);
@@ -18,72 +21,78 @@ export const checkAuth = async () => {
   }
   
   try {
-    // Ajouter un slash à la fin pour éviter la redirection
-    const userData = await api.get('auth/me/').json();
+    const userData = await getCurrentUser();
     user.set(userData);
     isAuthenticated.set(true);
     isLoading.set(false);
     return true;
   } catch (error) {
-    console.error('Erreur lors de la vérification de l\'authentification:', error);
-    localStorage.removeItem('token');
-    user.set(null);
-    isAuthenticated.set(false);
-    isLoading.set(false);
+    console.error('Auth check failed:', error);
+    logout();
     return false;
   }
 };
 
-// Fonction pour se connecter
+/**
+ * Login user
+ * @param {string} email User email
+ * @param {string} password User password
+ * @returns {Promise<Object>} Result object with success flag and data/error
+ */
 export const login = async (email, password) => {
   try {
-    // Format attendu par l'API FastAPI OAuth2PasswordRequestForm
-    const formData = new FormData();
-    formData.append('username', email);
-    formData.append('password', password);
+    isLoading.set(true);
+    const result = await loginUser(email, password);
     
-    // Ajouter un slash à la fin pour éviter la redirection
-    const response = await api.post('auth/token/', { body: formData }).json();
-    const { access_token } = response;
+    if (result.success) {
+      const { access_token } = result.data;
+      localStorage.setItem('auth_token', access_token);
+      
+      // Get user profile
+      const userData = await getCurrentUser();
+      user.set(userData);
+      isAuthenticated.set(true);
+    }
     
-    localStorage.setItem('token', access_token);
-    
-    // Ajouter un slash à la fin pour éviter la redirection
-    const userData = await api.get('auth/me/').json();
-    user.set(userData);
-    isAuthenticated.set(true);
-    
-    return { success: true };
+    isLoading.set(false);
+    return result;
   } catch (error) {
-    console.error('Erreur lors de la connexion:', error);
+    isLoading.set(false);
     return { 
       success: false, 
-      error: error.message || 'Erreur lors de la connexion'
+      error: error.message || 'Login failed'
     };
   }
 };
 
-// Fonction pour s'inscrire
+/**
+ * Register a new user
+ * @param {string} username Username
+ * @param {string} email User email
+ * @param {string} password User password
+ * @returns {Promise<Object>} Result object with success flag and data/error
+ */
 export const register = async (username, email, password) => {
   try {
-    // Ajouter un slash à la fin pour éviter la redirection
-    const response = await api.post('auth/register/', { 
-      json: { username, email, password }
-    }).json();
-    
-    return { success: true, user: response };
+    isLoading.set(true);
+    const result = await registerUser(username, email, password);
+    isLoading.set(false);
+    return result;
   } catch (error) {
-    console.error('Erreur lors de l\'inscription:', error);
+    isLoading.set(false);
     return { 
       success: false, 
-      error: error.message || 'Erreur lors de l\'inscription'
+      error: error.message || 'Registration failed'
     };
   }
 };
 
-// Fonction pour se déconnecter
+/**
+ * Logout user
+ */
 export const logout = () => {
-  localStorage.removeItem('token');
+  localStorage.removeItem('auth_token');
   user.set(null);
   isAuthenticated.set(false);
+  isLoading.set(false);
 };

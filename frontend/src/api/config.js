@@ -1,37 +1,39 @@
-// frontend/src/api/config.js
-import ky from 'ky';
+// src/api/config.js
+import ky from "ky";
 
-// Configuration de l'API
-export const API_URL = '/api';
+// API base URL
+export const API_URL = "/api";
 
-// Configuration de l'instance Ky
+
+// Create a configured Ky instance with prefixUrl
 const api = ky.create({
   prefixUrl: API_URL,
+  timeout: 30000,
   hooks: {
     beforeRequest: [
       (request) => {
-        const token = localStorage.getItem('token');
+        // Add authentication token to requests if available
+        const token = localStorage.getItem("auth_token");
         if (token) {
-          request.headers.set('Authorization', `Bearer ${token}`);
+          request.headers.set("Authorization", `Bearer ${token}`);
         }
-      }
+      },
     ],
     afterResponse: [
-      async (request, options, response) => {
+      (request, options, response) => {
+        // Handle authentication errors
         if (response.status === 401) {
-          localStorage.removeItem('token');
-          if (!window.location.pathname.includes('/login')) {
-            window.location.href = '/login';
+          // Clear token and redirect to login if not already there
+          localStorage.removeItem("auth_token");
+          if (!window.location.pathname.includes("/login")) {
+            window.location.href = "/login";
           }
         }
         return response;
-      }
-    ]
+      },
+    ],
   },
-  // Configuration importante : activer le suivi des redirections
-  redirect: 'follow',
-  // timeout
-  timeout: 30000
+
 });
 
 export default api;
