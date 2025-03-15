@@ -15,17 +15,24 @@ class Settings:
     MEILISEARCH_URL = os.getenv("MEILISEARCH_URL", "http://localhost:7700")
     MEILISEARCH_API_KEY = os.getenv("MEILISEARCH_API_KEY", "")
 
-    # LLM API
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-    OPENAI_API_BASE = os.getenv("OPENAI_API_BASE")
+    # Redis for streaming
+    REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+    # Google API
+    GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
+    
+    # Legacy LLM API (kept for backward compatibility)
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_API_BASE = os.getenv("OPENAI_API_BASE", "")
     OLLAMA_API_BASE = os.getenv("OLLAMA_API_BASE", "http://localhost:11434")
 
-    # Indexes Meilisearch
+    # Meilisearch Indexes
     USER_INDEX = "users"
     CHAT_INDEX = "chats"
     MESSAGE_INDEX = "messages"
     DOCUMENT_INDEX = "documents"
     VECTOR_INDEX = "vectors"
     MODEL_INDEX = "models"
+    STREAM_SESSIONS_INDEX = "stream_sessions"
 
 settings = Settings()

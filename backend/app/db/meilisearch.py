@@ -27,6 +27,7 @@ async def init_meilisearch():
         settings.DOCUMENT_INDEX,
         settings.VECTOR_INDEX,
         settings.MODEL_INDEX,
+        settings.STREAM_SESSIONS_INDEX,
     ]
 
     for index_name in indexes:
@@ -72,6 +73,14 @@ async def init_meilisearch():
                 await meilisearch_client.index(index_name).update_sortable_attributes(
                     ["created_at", "updated_at"]
                 )
+            elif index_name == settings.STREAM_SESSIONS_INDEX:
+                await meilisearch_client.index(index_name).update_filterable_attributes(
+                    ["id", "user_id"]
+                )
+                await meilisearch_client.index(index_name).update_sortable_attributes(
+                    ["created_at", "updated_at"]
+                )
+
         except Exception:
             # Créer l'index s'il n'existe pas
             print("create index...")

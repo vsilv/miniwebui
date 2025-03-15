@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
-from fastapi.responses import StreamingResponse
-from typing import List, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
+from fastapi.responses import StreamingResponse, JSONResponse
+from typing import List, Dict, Any, AsyncGenerator
 import uuid
-from datetime import datetime
 import json
 import asyncio
 import time
@@ -15,10 +14,11 @@ from app.models.chat import (
     MessageCreate,
     ChatWithMessages,
     ChatResponse,
+    StreamSession,
 )
 from app.models.models import CompletionRequest
 from app.services.auth import get_current_active_user
-from app.services.llm import get_completion, get_streaming_completion
+from app.services.llm import get_completion, start_streaming_completion, read_stream_messages
 from app.db.meilisearch import get_meilisearch_client
 from app.core.config import settings
 
@@ -43,14 +43,11 @@ async def create_chat(
         "updated_at": now,
     }
 
-    # Créer le chat
-    print("create chat", chat_id)
+    # Create the chat
     res = await client.index(settings.CHAT_INDEX).add_documents([chat_dict])
-    print(res)
     res = await client.wait_for_task(res.task_uid)
-    print(res)
 
-    # Si un message système est fourni, l'ajouter
+    # If a system message is provided, add it
     if chat_data.system_prompt:
         system_message = {
             "id": str(uuid.uuid4()),
@@ -79,8 +76,7 @@ async def list_chats(current_user: User = Depends(get_current_active_user)):
 async def get_chat(chat_id: str, current_user: User = Depends(get_current_active_user)):
     client = await get_meilisearch_client()
 
-    # Récupérer le chat
-    print("search for chat", chat_id)
+    # Get the chat
     chat_result = await client.index(settings.CHAT_INDEX).search(
         filter=f"id = {chat_id} AND user_id = {current_user.id}", limit=1
     )
@@ -92,7 +88,7 @@ async def get_chat(chat_id: str, current_user: User = Depends(get_current_active
 
     chat = Chat(**chat_result.hits[0])
 
-    # Récupérer les messages
+    # Get the messages
     messages_result = await client.index(settings.MESSAGE_INDEX).search(
         filter=f"chat_id = {chat_id}", sort=["created_at:asc"], limit=100
     )
@@ -109,9 +105,12 @@ async def add_message(
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
 ):
+    """
+    Non-streaming message endpoint (for backward compatibility)
+    """
     client = await get_meilisearch_client()
 
-    # Vérifier que le chat existe et appartient à l'utilisateur
+    # Verify that the chat exists and belongs to the user
     chat_result = await client.index(settings.CHAT_INDEX).search(
         filter=f"id = {chat_id} AND user_id = {current_user.id}", limit=1
     )
@@ -123,7 +122,7 @@ async def add_message(
 
     chat = Chat(**chat_result.hits[0])
 
-    # Ajouter le message utilisateur
+    # Add the user message
     message_id = str(uuid.uuid4())
     now = int(time.time())
 
@@ -137,33 +136,33 @@ async def add_message(
 
     await client.index(settings.MESSAGE_INDEX).add_documents([user_message])
 
-    # Mettre à jour la date de mise à jour du chat
+    # Update the chat's updated_at timestamp
     await client.index(settings.CHAT_INDEX).update_documents(
         [{"id": chat_id, "updated_at": now}]
     )
 
-    # Récupérer tous les messages précédents pour le contexte
+    # Get all previous messages for context
     messages_result = await client.index(settings.MESSAGE_INDEX).search(
         filter=f"chat_id = {chat_id}", sort=["created_at:asc"], limit=100
     )
 
-    # Convertir en format attendu par l'API de complétion
+    # Convert to expected format for the completion API
     messages_for_completion = [
         {"role": msg["role"], "content": msg["content"]} for msg in messages_result.hits
     ]
 
-    # Créer une requête de complétion
+    # Create a completion request
     completion_request = CompletionRequest(
         model=chat.model, messages=messages_for_completion
     )
 
-    # Obtenir la réponse du modèle (non-streaming)
+    # Get the model response (non-streaming)
     completion = await get_completion(completion_request)
 
-    # Extraire la réponse
+    # Extract the response
     assistant_response = completion["choices"][0]["message"]["content"]
 
-    # Sauvegarder la réponse de l'assistant
+    # Save the assistant's response
     assistant_message = {
         "id": str(uuid.uuid4()),
         "chat_id": chat_id,
@@ -181,15 +180,18 @@ async def add_message(
     )
 
 
-@router.post("/{chat_id}/messages/stream")
-async def add_message_stream(
+@router.post("/{chat_id}/messages/stream", response_model=StreamSession)
+async def start_message_stream(
     chat_id: str,
     message: MessageCreate,
     current_user: User = Depends(get_current_active_user),
 ):
+    """
+    Start a streaming message generation and return a session ID to track it
+    """
     client = await get_meilisearch_client()
 
-    # Vérifier que le chat existe et appartient à l'utilisateur
+    # Verify that the chat exists and belongs to the user
     chat_result = await client.index(settings.CHAT_INDEX).search(
         filter=f"id = {chat_id} AND user_id = {current_user.id}", limit=1
     )
@@ -201,7 +203,7 @@ async def add_message_stream(
 
     chat = Chat(**chat_result.hits[0])
 
-    # Ajouter le message utilisateur
+    # Add the user message
     message_id = str(uuid.uuid4())
     now = int(time.time())
 
@@ -215,56 +217,166 @@ async def add_message_stream(
 
     await client.index(settings.MESSAGE_INDEX).add_documents([user_message])
 
-    # Mettre à jour la date de mise à jour du chat
+    # Update the chat's updated_at timestamp
     await client.index(settings.CHAT_INDEX).update_documents(
         [{"id": chat_id, "updated_at": now}]
     )
 
-    # Récupérer tous les messages précédents pour le contexte
+    # Get all previous messages for context
     messages_result = await client.index(settings.MESSAGE_INDEX).search(
         filter=f"chat_id = {chat_id}", sort=["created_at:asc"], limit=100
     )
 
-    # Convertir en format attendu par l'API de complétion
+    # Convert to expected format for the completion API
     messages_for_completion = [
         {"role": msg["role"], "content": msg["content"]} for msg in messages_result.hits
     ]
 
-    # Créer une requête de complétion avec streaming
+    # Create a completion request
     completion_request = CompletionRequest(
         model=chat.model, messages=messages_for_completion, stream=True
     )
 
-    # ID du message de l'assistant
+    # Generate a unique message ID for the assistant's message
     assistant_message_id = str(uuid.uuid4())
+    
+    # Start the streaming generation and get the session ID
+    session_id = await start_streaming_completion(completion_request)
+    
+    # Store session info in Redis
+    # This is a simple key-value approach that eliminates the need for Meilisearch
+    redis_key = f"session_info:{session_id}"
+    session_info = {
+        "id": session_id,
+        "message_id": assistant_message_id,
+        "chat_id": chat_id,
+        "user_id": current_user.id,
+        "created_at": now
+    }
+    
+    # Import redis_client directly here
+    from app.services.llm import redis_client
+    await redis_client.set(
+        redis_key, 
+        json.dumps(session_info),
+        ex=3600  # 1 hour expiration
+    )
+    
+    # Return the session info
+    return StreamSession(
+        session_id=session_id,
+        message_id=assistant_message_id,
+        created_at=now
+    )
 
-    # Obtenir un générateur de streaming pour la réponse
-    async def stream_response():
-        full_response = ""
 
-        async for chunk in get_streaming_completion(completion_request):
-            if "choices" in chunk and len(chunk["choices"]) > 0:
-                delta = chunk["choices"][0].get("delta", {})
-                content = delta.get("content", "")
-                if content:
-                    full_response += content
-                    yield f"data: {json.dumps({'content': content, 'done': False})}\n\n"
-
-        # Sauvegarder le message complet à la fin du streaming
-        assistant_message = {
-            "id": assistant_message_id,
-            "chat_id": chat_id,
-            "role": "assistant",
-            "content": full_response,
-            "created_at": int(time.time()),
+@router.get("/stream/{session_id}/events")
+async def stream_chat_events(session_id: str, request: Request):
+    """
+    SSE endpoint that streams events for a specific session.
+    Authentication is disabled for this route for simplicity.
+    """
+    # Import redis_client directly
+    from app.services.llm import redis_client
+    
+    # Get session info from Redis
+    redis_key = f"session_info:{session_id}"
+    session_data = await redis_client.get(redis_key)
+    
+    if not session_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Stream session not found"
+        )
+    
+    # Parse session info
+    session_info = json.loads(session_data)
+    chat_id = session_info["chat_id"]
+    message_id = session_info["message_id"]
+    
+    # For debug
+    print(f"Starting SSE stream for session {session_id}, message {message_id}, chat {chat_id}")
+    
+    # Check for client disconnect
+    disconnect = asyncio.create_task(request.is_disconnected())
+    
+    # Define the SSE streaming response generator
+    async def sse_generator():
+        full_content = ""
+        client = await get_meilisearch_client()
+        
+        try:
+            # Start reading from the beginning of the stream
+            last_id = "0"
+            
+            # Stream messages from Redis Stream
+            async for event in read_stream_messages(session_id, last_id):
+                # Check for disconnection
+                if disconnect.done():
+                    print("Client disconnected")
+                    break
+                
+                # Extract data from the event
+                event_type = event.get("type")
+                content = event.get("content", "")
+                is_done = event.get("done") == "true" or event_type == "end"
+                error = event.get("error")
+                
+                # For token events, accumulate the content
+                if event_type == "token" and content:
+                    full_content += content
+                
+                # For end events, use the full_content if available
+                if is_done and "full_content" in event:
+                    full_content = event.get("full_content", full_content)
+                
+                # Prepare the event data for the client
+                client_event = {
+                    "content": content,
+                    "done": is_done
+                }
+                
+                if is_done:
+                    client_event["id"] = message_id
+                
+                if error:
+                    client_event["error"] = error
+                
+                # Send the event
+                yield f"data: {json.dumps(client_event)}\n\n"
+                
+                # If this is the last event, save the complete message
+                if is_done:
+                    try:
+                        # Save the assistant's message to Meilisearch
+                        assistant_message = {
+                            "id": message_id,
+                            "chat_id": chat_id,
+                            "role": "assistant",
+                            "content": full_content,
+                            "created_at": int(time.time()),
+                        }
+                        
+                        await client.index(settings.MESSAGE_INDEX).add_documents([assistant_message])
+                        print(f"Saved complete message {message_id} to Meilisearch")
+                    except Exception as e:
+                        print(f"Error saving message to Meilisearch: {e}")
+                    
+                    break
+                
+        except Exception as e:
+            print(f"Error in SSE generator: {e}")
+            yield f"data: {json.dumps({'error': str(e), 'done': True})}\n\n"
+    
+    # Return a streaming response
+    return StreamingResponse(
+        sse_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"  # Important for NGINX proxying
         }
-
-        await client.index(settings.MESSAGE_INDEX).add_documents([assistant_message])
-
-        # Envoyer un événement final pour indiquer que c'est terminé
-        yield f"data: {json.dumps({'content': '', 'done': True, 'id': assistant_message_id})}\n\n"
-
-    return StreamingResponse(stream_response(), media_type="text/event-stream")
+    )
 
 
 @router.delete("/{chat_id}")
@@ -273,7 +385,7 @@ async def delete_chat(
 ):
     client = await get_meilisearch_client()
 
-    # Vérifier que le chat existe et appartient à l'utilisateur
+    # Verify that the chat exists and belongs to the user
     chat_result = await client.index(settings.CHAT_INDEX).search(
         filter=f"id = {chat_id} AND user_id = {current_user.id}", limit=1
     )
@@ -283,12 +395,12 @@ async def delete_chat(
             status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found"
         )
 
-    # Supprimer les messages associés
+    # Delete associated messages
     await client.index(settings.MESSAGE_INDEX).delete_documents(
         {"filter": f"chat_id = {chat_id}"}
     )
 
-    # Supprimer le chat
+    # Delete the chat
     await client.index(settings.CHAT_INDEX).delete_document(chat_id)
 
     return {"message": "Chat deleted successfully"}

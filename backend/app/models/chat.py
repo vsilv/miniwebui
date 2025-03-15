@@ -56,3 +56,10 @@ class ChatResponse(BaseModel):
     content: str
     created_at: int
     metadata: Optional[Dict[str, Any]] = None
+
+
+class StreamSession(BaseModel):
+    """Response model for streaming session information"""
+    session_id: str
+    message_id: str
+    created_at: int
