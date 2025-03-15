@@ -1,7 +1,8 @@
+// frontend/src/api/config.js
+import ky from 'ky';
+
 // Configuration de l'API
 export const API_URL = '/api';
-
-import ky from 'ky';
 
 // Configuration de l'instance Ky
 const api = ky.create({
@@ -18,8 +19,8 @@ const api = ky.create({
     afterResponse: [
       async (request, options, response) => {
         if (response.status === 401) {
+          localStorage.removeItem('token');
           if (!window.location.pathname.includes('/login')) {
-            localStorage.removeItem('token');
             window.location.href = '/login';
           }
         }
@@ -27,7 +28,9 @@ const api = ky.create({
       }
     ]
   },
-  // 30 seconds timeout
+  // Configuration importante : activer le suivi des redirections
+  redirect: 'follow',
+  // timeout
   timeout: 30000
 });
 

@@ -22,6 +22,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validation simple
     if (!email || !password) {
       setError('Veuillez remplir tous les champs');
       return;
@@ -31,7 +32,11 @@ const Login = () => {
       setIsLoading(true);
       setError('');
       
+      console.log('Tentative de connexion avec:', { email }); // Ne pas logger le mot de passe
+      
       const result = await login(email, password);
+      
+      console.log('Résultat de connexion:', result);
       
       if (result.success) {
         toast.success('Connexion réussie');
@@ -40,8 +45,8 @@ const Login = () => {
         setError(result.error || 'Email ou mot de passe incorrect');
       }
     } catch (err) {
-      setError('Une erreur est survenue. Veuillez réessayer.');
       console.error('Login error:', err);
+      setError('Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setIsLoading(false);
     }

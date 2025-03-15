@@ -1,3 +1,5 @@
+// frontend/src/store/chatStore.js - Correction des URL pour éviter les redirections 307
+
 import { atom, map } from 'nanostores';
 import api from '../api/config';
 
@@ -18,7 +20,8 @@ export const selectedModel = atom('gpt-3.5-turbo');
 // Fonctions pour obtenir les chats
 export const fetchChats = async () => {
   try {
-    const response = await api.get('chat').json();
+    // S'assurer que l'URL se termine par un slash pour éviter les redirections 307
+    const response = await api.get('chat/').json();
     chats.set(response);
     return response;
   } catch (error) {
@@ -38,7 +41,8 @@ export const createChat = async (model = 'gpt-3.5-turbo', systemPrompt = null) =
       system_prompt: systemPrompt
     };
     
-    const response = await api.post('chat', { json: data }).json();
+    // S'assurer que l'URL se termine par un slash
+    const response = await api.post('chat/', { json: data }).json();
     const newChat = response;
     
     // Mettre à jour la liste des chats
@@ -67,7 +71,8 @@ export const fetchChat = async (chatId) => {
   try {
     currentChat.setKey('isLoading', true);
     
-    const response = await api.get(`chat/${chatId}`).json();
+    // S'assurer que l'URL se termine par un slash
+    const response = await api.get(`chat/${chatId}/`).json();
     const chatData = response;
     
     currentChat.set({
@@ -99,13 +104,12 @@ export const sendMessage = async (content) => {
       id: `temp-${Date.now()}`,
       role: 'user',
       content,
-      created_at: new Date().toISOString()
+      created_at: Date.now()
     };
     
     const currentMessages = currentChat.get().messages;
     currentChat.setKey('messages', [...currentMessages, userMessage]);
     
-
     // Envoyer le message à l'API
     // Mode standard (non-streaming)
     const messageData = {
@@ -113,7 +117,8 @@ export const sendMessage = async (content) => {
       content
     };
     
-    const response = await api.post(`chat/${chatId}/messages`, { json: messageData }).json();
+    // S'assurer que l'URL se termine par un slash
+    const response = await api.post(`chat/${chatId}/messages/`, { json: messageData }).json();
     const assistantResponse = response;
     
     // Ajouter la réponse de l'assistant
@@ -139,7 +144,8 @@ export const sendMessage = async (content) => {
 // Fonction pour supprimer un chat
 export const deleteChat = async (chatId) => {
   try {
-    await api.delete(`chat/${chatId}`);
+    // S'assurer que l'URL se termine par un slash
+    await api.delete(`chat/${chatId}/`);
     
     // Mettre à jour la liste des chats
     const updatedChats = chats.get().filter(chat => chat.id !== chatId);
@@ -166,7 +172,8 @@ export const deleteChat = async (chatId) => {
 // Fonction pour obtenir les modèles disponibles
 export const fetchModels = async () => {
   try {
-    const response = await api.get('models').json();
+    // S'assurer que l'URL se termine par un slash
+    const response = await api.get('models/').json();
     models.set(response);
     return response;
   } catch (error) {
