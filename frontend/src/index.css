@@ -1,0 +1,230 @@
+/* Importer les polices */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap");
+@import "tailwindcss";
+
+@theme {
+  /* Couleurs principales */
+  --color-primary-50: #f0f9ff;
+  --color-primary-100: #e0f2fe;
+  --color-primary-200: #bae6fd;
+  --color-primary-300: #7dd3fc;
+  --color-primary-400: #38bdf8;
+  --color-primary-500: #0ea5e9;
+  --color-primary-600: #0284c7;
+  --color-primary-700: #0369a1;
+  --color-primary-800: #075985;
+  --color-primary-900: #0c4a6e;
+  --color-primary-950: #082f49;
+
+  /* Variante sombre (pour le mode sombre) */
+  --color-dark-50: #f8fafc;
+  --color-dark-100: #f1f5f9;
+  --color-dark-200: #e2e8f0;
+  --color-dark-300: #cbd5e1;
+  --color-dark-400: #94a3b8;
+  --color-dark-500: #64748b;
+  --color-dark-600: #475569;
+  --color-dark-700: #334155;
+  --color-dark-800: #1e293b;
+  --color-dark-900: #0f172a;
+  --color-dark-950: #020617;
+
+  /* Polices */
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Ombrages */
+  --shadow-message: 0 2px 6px rgba(0, 0, 0, 0.05);
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
+  /* Bordures */
+  --rounded-message: 0.75rem;
+
+  /* Hauteur maximale */
+  --max-height-chat: calc(100vh - 180px);
+}
+
+/* Variables globales */
+:root {
+  --sidebar-width: 260px;
+  --header-height: 60px;
+  --footer-height: 50px;
+}
+
+/* Styles de base */
+html {
+  @apply h-full antialiased;
+}
+
+body {
+  @apply h-full font-sans text-base bg-white dark:bg-dark-900 text-gray-900 dark:text-gray-100;
+}
+
+#root,
+.app {
+  @apply h-full;
+}
+
+/* Scrollbars personnalisées */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-dark-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-dark-500;
+}
+
+/* Styles markdown */
+.markdown {
+  @apply text-gray-800 dark:text-gray-200;
+}
+
+.markdown h1 {
+  @apply text-2xl font-bold mt-6 mb-4;
+}
+
+.markdown h2 {
+  @apply text-xl font-bold mt-5 mb-3;
+}
+
+.markdown h3 {
+  @apply text-lg font-bold mt-4 mb-2;
+}
+
+.markdown p {
+  @apply my-3;
+}
+
+.markdown ul {
+  @apply list-disc pl-5 my-3;
+}
+
+.markdown ol {
+  @apply list-decimal pl-5 my-3;
+}
+
+.markdown a {
+  @apply text-primary-600 dark:text-primary-400 hover:underline;
+}
+
+.markdown blockquote {
+  @apply border-l-4 border-gray-300 dark:border-dark-600 pl-4 italic my-3 text-gray-600 dark:text-gray-400;
+}
+
+.markdown pre {
+  @apply bg-gray-100 dark:bg-dark-800 p-3 rounded my-3 overflow-x-auto;
+}
+
+.markdown code {
+  @apply font-mono text-sm bg-gray-100 dark:bg-dark-800 px-1 py-0.5 rounded;
+}
+
+.markdown pre code {
+  @apply bg-transparent p-0;
+}
+
+.markdown table {
+  @apply w-full border-collapse my-3;
+}
+
+.markdown th {
+  @apply border border-gray-300 dark:border-dark-700 px-3 py-2 bg-gray-100 dark:bg-dark-800;
+}
+
+.markdown td {
+  @apply border border-gray-300 dark:border-dark-700 px-3 py-2;
+}
+
+/* Animation de chargement des messages */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Thème Rose Pine (adapté depuis les fichiers CSS) */
+.rose-pine * {
+  color: #e0def4 !important;
+  stroke: #907aa9 !important;
+}
+
+.rose-pine .app {
+  background-color: #1f1d2e !important;
+}
+
+.rose-pine .sidebar {
+  background-color: #191724;
+}
+
+.rose-pine .header {
+  background-color: #26233a;
+}
+
+.rose-pine .chat-input {
+  background: #393552;
+}
+
+.rose-pine .message-user {
+  background-color: #403d52;
+}
+
+.rose-pine .message-assistant {
+  background-color: #2a273f;
+}
+
+.rose-pine .button-primary {
+  background-color: #31748f;
+}
+
+/* Thème Rose Pine Dawn (adapté depuis les fichiers CSS) */
+.rose-pine-dawn * {
+  color: #575279 !important;
+  stroke: #d7827e !important;
+}
+
+.rose-pine-dawn .app {
+  background-color: #faf4ed !important;
+}
+
+.rose-pine-dawn .sidebar {
+  background-color: #fffaf3;
+}
+
+.rose-pine-dawn .header {
+  background-color: #f2e9e1;
+}
+
+.rose-pine-dawn .chat-input {
+  background: #cecacd;
+}
+
+.rose-pine-dawn .message-user {
+  background-color: #dfdad9;
+}
+
+.rose-pine-dawn .message-assistant {
+  background-color: #f2e9e1;
+}
+
+.rose-pine-dawn .button-primary {
+  background-color: #56949f;
+}

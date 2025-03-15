@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+python-dotenv
+python-multipart
+meilisearch-python-sdk
+aiohttp
+passlib
+python-jose
+bcrypt
+pypdf
+docx2txt
+aiofiles
+pydantic
+numpy
+python-dateutil
