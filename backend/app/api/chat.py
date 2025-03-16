@@ -12,6 +12,7 @@ from app.models.chat import (
     ChatCreate,
     Message,
     MessageCreate,
+    MessageStreamRequest,
     ChatWithMessages,
     ChatResponse,
     StreamSession,
@@ -188,13 +189,15 @@ async def add_message(
 async def start_message_stream(
     background_tasks: BackgroundTasks,
     chat_id: str,
-    message: MessageCreate,
+    request: MessageStreamRequest,
     current_user: User = Depends(get_current_active_user),
 ):
     """
     Start a streaming message generation and return a session ID to track it
     """
-
+    message = request.message
+    regenerate = request.regenerate
+    print("regenerate", regenerate)
     session_id = str(uuid.uuid4())
     # Generate a unique message ID for the assistant's message
     assistant_message_id = str(uuid.uuid4())
@@ -244,14 +247,6 @@ async def start_message_stream(
             "content": message.content,
             "created_at": now,
         }
-
-        await client.index(settings.MESSAGE_INDEX).add_documents([user_message])
-
-        # Update the chat's updated_at timestamp
-        await client.index(settings.CHAT_INDEX).update_documents(
-            [{"id": chat_id, "updated_at": now}]
-        )
-
         # Get all previous messages for context
         messages_result = await client.index(settings.MESSAGE_INDEX).search(
             filter=f"chat_id = {chat_id}", sort=["created_at:asc"], limit=100
@@ -262,6 +257,19 @@ async def start_message_stream(
             {"role": msg["role"], "content": msg["content"]}
             for msg in messages_result.hits
         ]
+
+        messages_for_completion.append(
+            {"role": message.role, "content": message.content}
+        )
+
+        print(messages_for_completion)
+
+        await client.index(settings.MESSAGE_INDEX).add_documents([user_message])
+
+        # Update the chat's updated_at timestamp
+        # await client.index(settings.CHAT_INDEX).update_documents(
+        #     [{"id": chat_id, "updated_at": now}]
+        # )
 
         # Create a completion request
         completion_request = CompletionRequest(
@@ -325,8 +333,6 @@ async def stream_chat_events(session_id: str, request: Request):
 
             # Stream messages from Redis Stream
             async for event in read_stream_messages(session_id, last_id):
-
-
                 # Extract data from the event
                 event_type = event.get("type")
                 content = event.get("content", "")

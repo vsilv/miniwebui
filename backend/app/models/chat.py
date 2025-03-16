@@ -13,6 +13,9 @@ class MessageBase(BaseModel):
 class MessageCreate(MessageBase):
     pass
 
+class MessageStreamRequest(BaseModel): 
+    message: MessageCreate
+    regenerate: bool = False 
 
 class Message(MessageBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

@@ -173,7 +173,9 @@ export const sendMessage = async (content, streaming = true) => {
         // Initiate streaming session
         const sessionResponse = await api
           .post(`chat/${chatId}/messages/stream`, {
-            json: messageData,
+            json: {
+              message: messageData, // ✅ Contenu du message
+            },
           })
           .json();
 
@@ -231,12 +233,14 @@ export const sendMessage = async (content, streaming = true) => {
                 console.error("Error in stream:", error);
                 updatedMessage.error = true;
                 updatedMessage.is_streaming = false;
-                
+
                 // If we have no content yet, add a default error message
                 if (!updatedMessage.content) {
-                  updatedMessage.content = "Une erreur s'est produite lors de la génération de la réponse. L'API a retourné : " + error;
+                  updatedMessage.content =
+                    "Une erreur s'est produite lors de la génération de la réponse. L'API a retourné : " +
+                    error;
                 }
-                
+
                 toast.error("Erreur lors de la génération de la réponse");
               }
 
@@ -255,27 +259,28 @@ export const sendMessage = async (content, streaming = true) => {
             }
           } catch (e) {
             console.error("Error parsing SSE data:", e);
-            
+
             // Mark the message as errored
             const messages = currentChat.get().messages;
             const messageIndex = messages.findIndex(
               (msg) => msg.id === message_id
             );
-            
+
             if (messageIndex !== -1) {
               const updatedMessage = {
                 ...messages[messageIndex],
                 error: true,
                 is_streaming: false,
-                content: "Une erreur s'est produite lors de la génération de la réponse."
+                content:
+                  "Une erreur s'est produite lors de la génération de la réponse.",
               };
-              
+
               const newMessages = [...messages];
               newMessages[messageIndex] = updatedMessage;
-              
+
               currentChat.setKey("messages", newMessages);
             }
-            
+
             eventSource.close();
             currentChat.setKey("isLoading", false);
           }
@@ -284,27 +289,28 @@ export const sendMessage = async (content, streaming = true) => {
         // Handle SSE errors
         eventSource.onerror = (error) => {
           console.error("SSE connection error:", error);
-          
+
           // Mark the message as errored
           const messages = currentChat.get().messages;
           const messageIndex = messages.findIndex(
             (msg) => msg.id === message_id
           );
-          
+
           if (messageIndex !== -1) {
             const updatedMessage = {
               ...messages[messageIndex],
               error: true,
               is_streaming: false,
-              content: "Une erreur de connexion s'est produite. Veuillez réessayer."
+              content:
+                "Une erreur de connexion s'est produite. Veuillez réessayer.",
             };
-            
+
             const newMessages = [...messages];
             newMessages[messageIndex] = updatedMessage;
-            
+
             currentChat.setKey("messages", newMessages);
           }
-          
+
           toast.error("Erreur de connexion");
           eventSource.close();
           currentChat.setKey("isLoading", false);
@@ -313,7 +319,7 @@ export const sendMessage = async (content, streaming = true) => {
         return message_id;
       } catch (error) {
         console.error("Error initiating stream:", error);
-        
+
         // Add an error message directly
         const errorMessage = {
           id: `error-${Date.now()}`,
@@ -322,12 +328,9 @@ export const sendMessage = async (content, streaming = true) => {
           created_at: Math.floor(Date.now() / 1000),
           error: true,
         };
-        
-        const updatedMessages = [
-          ...currentChat.get().messages,
-          errorMessage,
-        ];
-        
+
+        const updatedMessages = [...currentChat.get().messages, errorMessage];
+
         currentChat.setKey("messages", updatedMessages);
         toast.error("Erreur lors du démarrage du flux de messages");
         currentChat.setKey("isLoading", false);
