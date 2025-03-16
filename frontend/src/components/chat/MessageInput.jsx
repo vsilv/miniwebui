@@ -7,7 +7,7 @@ import {
   MicOff,
   Loader,
   X,
-  FileText,
+  File,
 } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
 import { sendMessage } from "../../store/chatStore";
@@ -183,17 +183,15 @@ const MessageInput = ({
   // Submit the message
   const handleSendMessage = async () => {
     const trimmedMessage = message.trim();
-    const allDocs = [...attachedDocs, ...selectedDocs];
+    const allDocs = [ ...selectedDocs];
 
     if (!trimmedMessage && !file && allDocs.length === 0) return;
 
     // Reset input
     setMessage("");
     const currentFile = file;
-    const currentAttachedDocs = [...attachedDocs];
     const currentSelectedDocs = [...selectedDocs];
     setFile(null);
-    setAttachedDocs([]);
 
     // Clear selected documents from parent component if handler provided
     if (typeof onRemoveDoc === "function") {
@@ -201,32 +199,9 @@ const MessageInput = ({
     }
 
     try {
-      // If there are attached documents, mention them in the message
-      let finalMessage = trimmedMessage;
-
-      const allDocsToMention = [...currentAttachedDocs, ...currentSelectedDocs];
-
-      if (allDocsToMention.length > 0) {
-        const docsInfo = allDocsToMention
-          .map((doc) => doc.name || doc.title)
-          .join(", ");
-        if (trimmedMessage) {
-          finalMessage = `${trimmedMessage}\n\n(Documents attachés: ${docsInfo})`;
-        } else {
-          finalMessage = `Voici les documents suivants: ${docsInfo}`;
-        }
-      }
-
-      // If there's a file, handle it first
-      if (currentFile) {
-        // TODO: Implement file upload and processing
-        toast.success(`Traitement du fichier ${currentFile.name}`);
-        fileInputRef.current.value = "";
-      }
-
-      // Send text message
-      if (finalMessage) {
-        await sendMessage(finalMessage, true); // true for streaming
+      // Send text message with document context
+      if (trimmedMessage) {
+        await sendMessage(trimmedMessage, currentSelectedDocs, true); // true for streaming
       }
 
       // Refocus the textarea after sending
@@ -250,6 +225,26 @@ const MessageInput = ({
   };
   return (
     <div className="border-t border-gray-200 dark:border-dark-700 pt-3 px-2 pb-3">
+      {/* Selected documents badges */}
+      <div className="flex items-center gap-2 mb-2">
+        {selectedDocs.map((doc) => (
+          <div
+            key={doc.id}
+            className="bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200 px-2 py-1 rounded-md text-sm flex items-center"
+          >
+            <File size={16} className="mr-1" />
+            <span>{doc.title}</span>
+            <button
+              onClick={() => onRemoveDoc(doc.id)}
+              className="ml-1 text-primary-500 hover:text-primary-700 dark:text-primary-300 dark:hover:text-primary-400"
+              aria-label="Remove document"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        ))}
+      </div>
+
       {/* File attachment preview */}
       {file && (
         <div className="mb-2 bg-gray-100 dark:bg-dark-800 px-3 py-2 rounded-md flex items-center justify-between">

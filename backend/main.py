@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 
-from app.api import auth, chat, models, knowledge
+from app.api import auth, chat, models, knowledge, project
 from app.core.config import settings
 from app.db.meilisearch import init_meilisearch, close_meilisearch
 
@@ -32,9 +32,11 @@ app.include_router(auth.router, prefix="/api", tags=["auth"])
 app.include_router(chat.router, prefix="/api", tags=["chat"])
 app.include_router(models.router, prefix="/api", tags=["models"])
 app.include_router(knowledge.router, prefix="/api", tags=["knowledge"])
+app.include_router(project.router, prefix="/api", tags=["project"])
 
-# Créer un dossier uploads s'il n'existe pas
+# Créer les dossiers nécessaires
 os.makedirs("uploads", exist_ok=True)
+os.makedirs("uploads/projects", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/")

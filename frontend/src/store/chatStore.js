@@ -166,7 +166,7 @@ export const fetchChat = async (chatId) => {
 };
 
 // Send a message and process the response
-export const sendMessage = async (content, streaming = true) => {
+export const sendMessage = async (content, selectedDocs = [], streaming = true) => {
   const chatId = currentChat.get().id;
   if (!chatId) return null;
 
@@ -189,11 +189,39 @@ export const sendMessage = async (content, streaming = true) => {
     currentChat.setKey("messages", [...currentMessages, userMessage]);
 
     // Prepare message data
-    const messageData = {
+    let messageData = {
       role: "user",
       content,
       id: userMessageId,           // Send client-generated ID
     };
+
+    // Include document context if documents are selected
+    if (selectedDocs && selectedDocs.length > 0) {
+      // Fetch document chunks and append to message content
+      let contextContent = "";
+      for (const doc of selectedDocs) {
+        const knowledgeSearchQuery = {
+          query: content,
+          document_id: doc.id,
+          limit: 3 // Adjust limit as needed
+        };
+
+        try {
+          const searchResults = await api.post("knowledge/search", { json: knowledgeSearchQuery }).json();
+          if (searchResults && searchResults.length > 0) {
+            contextContent += `\n\nDocument Context from ${doc.title}:\n`;
+            for (const result of searchResults) {
+              contextContent += `- ${result.chunk}\n`;
+            }
+          }
+        } catch (error) {
+          console.error("Error searching knowledge:", error);
+          toast.error("Error fetching document context");
+        }
+      }
+      messageData.content += contextContent; // Append context to user message
+    }
+
 
     if (streaming) {
       try {

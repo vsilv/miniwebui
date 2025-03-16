@@ -34,5 +34,10 @@ class Settings:
     CHUNK_INDEX = "chunks"
     MODEL_INDEX = "models"
     STREAM_SESSIONS_INDEX = "stream_sessions"
+    PROJECT_INDEX = "projects"
+    PROJECT_FILE_INDEX = "project_files"
+    
+    # Upload directory
+    UPLOAD_DIR = os.getenv("UPLOAD_DIR", "uploads")
 
 settings = Settings()

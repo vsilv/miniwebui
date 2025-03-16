@@ -28,6 +28,8 @@ async def init_meilisearch():
         settings.MODEL_INDEX,
         settings.CHUNK_INDEX,
         settings.STREAM_SESSIONS_INDEX,
+        settings.PROJECT_INDEX,
+        settings.PROJECT_FILE_INDEX,
     ]
 
     for index_name in indexes:
@@ -83,6 +85,20 @@ async def init_meilisearch():
             elif index_name == settings.CHUNK_INDEX:
                 await meilisearch_client.index(index_name).update_filterable_attributes(
                     ["id", "document_id", "index_name"]
+                )
+                await meilisearch_client.index(index_name).update_sortable_attributes(
+                    ["created_at", "updated_at"]
+                )
+            elif index_name == settings.PROJECT_INDEX:
+                await meilisearch_client.index(index_name).update_filterable_attributes(
+                    ["id", "title", "description", "user_id"]
+                )
+                await meilisearch_client.index(index_name).update_sortable_attributes(
+                    ["created_at", "updated_at"]
+                )
+            elif index_name == settings.PROJECT_FILE_INDEX:
+                await meilisearch_client.index(index_name).update_filterable_attributes(
+                    ["id", "project_id", "filename", "file_type", "user_id"]
                 )
                 await meilisearch_client.index(index_name).update_sortable_attributes(
                     ["created_at", "updated_at"]

@@ -11,6 +11,7 @@ import {
   Search,
   ChevronRight,
   ChevronDown,
+  Folder,
 } from "lucide-react";
 import { chats, fetchChats, deleteChat, updateChatTitle } from "../store/chatStore";
 import { useChat } from '../hooks/useChat';
@@ -131,7 +132,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
         {/* New chat button */}
-        <div className="p-3">
+        <div className="p-3 space-y-2">
           <button
             onClick={handleNewChat}
             disabled={isCreatingChat}
@@ -140,6 +141,15 @@ const Sidebar = ({ isOpen, onClose }) => {
             <PlusCircle size={18} />
             <span>Nouvelle conversation</span>
           </button>
+          
+          {/* New project button */}
+          <Link
+            to="/projects"
+            className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md transition focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-dark-800"
+          >
+            <Folder size={18} />
+            <span>Nouveau projet</span>
+          </Link>
         </div>
 
         {/* Search box */}
@@ -251,6 +261,19 @@ const Sidebar = ({ isOpen, onClose }) => {
           >
             <BookOpen size={18} className="mr-2" />
             <span>Base de connaissances</span>
+          </Link>
+          
+          {/* Projects link */}
+          <Link
+            to="/projects"
+            className={`flex items-center py-2 px-3 rounded-md ${
+              location.pathname === "/projects" || location.pathname.startsWith("/project/")
+                ? "bg-gray-200 dark:bg-dark-700 font-medium"
+                : "hover:bg-gray-200 dark:hover:bg-dark-700"
+            }`}
+          >
+            <Folder size={18} className="mr-2" />
+            <span>Projets</span>
           </Link>
         </nav>
 

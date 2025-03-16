@@ -13,6 +13,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Chat from "./pages/Chat";
 import Knowledge from "./pages/Knowledge";
+import Projects from "./pages/Projects";
+import Project from "./pages/Project";
 
 // Components
 import Layout from "./components/Layout";
@@ -105,6 +107,26 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Knowledge />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projects"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Projects />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/project/:projectId"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Project />
                 </Layout>
               </ProtectedRoute>
             }
