@@ -180,11 +180,17 @@ async def add_message(
     await client.index(settings.MESSAGE_INDEX).add_documents([assistant_message])
 
     # Check if we should generate a title (after 2 user messages)
-    user_messages_count = sum(1 for msg in messages_result.hits if msg["role"] == "user")
-    
-    if user_messages_count == 2 and (chat.title == "New conversation" or not chat.title):
+    user_messages_count = sum(
+        1 for msg in messages_result.hits if msg["role"] == "user"
+    )
+
+    if user_messages_count == 2 and (
+        chat.title == "New conversation" or not chat.title
+    ):
         # Generate a title in the background
-        background_tasks.add_task(generate_and_save_title, chat_id, messages_for_completion)
+        background_tasks.add_task(
+            generate_and_save_title, chat_id, messages_for_completion
+        )
 
     return ChatResponse(
         id=assistant_message["id"],
@@ -205,14 +211,16 @@ async def start_message_stream(
     """
     message = request.message
     regenerate = request.regenerate
-    assistant_message_id = request.assistant_message_id  # Get the client-generated assistant message ID
-    
+    assistant_message_id = (
+        request.assistant_message_id
+    )  # Get the client-generated assistant message ID
+
     print("regenerate", regenerate)
-    print("message ID:", message.id if hasattr(message, 'id') else "No ID provided")
+    print("message ID:", message.id if hasattr(message, "id") else "No ID provided")
     print("assistant message ID:", assistant_message_id)
-    
+
     session_id = str(uuid.uuid4())
-    
+
     # If no assistant_message_id was provided, generate one
     if not assistant_message_id:
         assistant_message_id = str(uuid.uuid4())
@@ -256,12 +264,12 @@ async def start_message_stream(
         messages_result = await client.index(settings.MESSAGE_INDEX).search(
             filter=f"chat_id = {chat_id}", sort=["created_at:asc"], limit=100
         )
-        
+
         # Extract all messages
         all_messages = messages_result.hits
-        
+
         # Handle message ID if provided
-        message_id = getattr(message, 'id', None)
+        message_id = getattr(message, "id", None)
         user_message_data = {
             "id": message_id if message_id else str(uuid.uuid4()),
             "chat_id": chat_id,
@@ -269,10 +277,10 @@ async def start_message_stream(
             "content": message.content,
             "created_at": now,
         }
-        
+
         # Messages for completion API
         messages_for_completion = []
-        
+
         if regenerate:
             # If regenerating, we need to find all messages before the specified message ID
             if message_id:
@@ -284,7 +292,7 @@ async def start_message_stream(
                         filtered_messages.append(msg)
                         break  # Stop after this message
                     filtered_messages.append(msg)
-                
+
                 # Convert to expected format for the completion API
                 messages_for_completion = [
                     {"role": msg["role"], "content": msg["content"]}
@@ -292,27 +300,34 @@ async def start_message_stream(
                 ]
             else:
                 # If no message ID, just use the current message
-                messages_for_completion = [{"role": message.role, "content": message.content}]
+                messages_for_completion = [
+                    {"role": message.role, "content": message.content}
+                ]
         else:
             # For a regular message, use all existing messages plus the new one
             messages_for_completion = [
-                {"role": msg["role"], "content": msg["content"]}
-                for msg in all_messages
+                {"role": msg["role"], "content": msg["content"]} for msg in all_messages
             ]
-            
+
             # Add the new message to messages_for_completion
             messages_for_completion.append(
                 {"role": message.role, "content": message.content}
             )
-            
+
             # Save the user message to the database
-            await client.index(settings.MESSAGE_INDEX).add_documents([user_message_data])
+            await client.index(settings.MESSAGE_INDEX).add_documents(
+                [user_message_data]
+            )
 
             # Check if we should generate a title (after exactly 2 user messages)
             # Count user messages (excluding the current one that was just added)
-            user_messages_count = sum(1 for msg in all_messages if msg["role"] == "user")
-            
-            if user_messages_count == 1 and (chat.title == "New conversation" or not chat.title):
+            user_messages_count = sum(
+                1 for msg in all_messages if msg["role"] == "user"
+            )
+
+            if user_messages_count == 1 and (
+                chat.title == "New conversation" or not chat.title
+            ):
                 # We now have exactly 2 user messages (1 previous + the current one)
                 # Schedule title generation task to run after this message completes
                 background_tasks.add_task(
@@ -347,7 +362,7 @@ async def start_message_stream(
 async def generate_and_save_title(chat_id: str, messages: List[Dict[str, Any]]):
     """
     Génère un titre pour la conversation et l'enregistre dans la base de données.
-    
+
     Args:
         chat_id: ID de la conversation
         messages: Liste des messages formatés pour l'API LLM
@@ -356,20 +371,16 @@ async def generate_and_save_title(chat_id: str, messages: List[Dict[str, Any]]):
         print(f"Generating title for chat {chat_id}...")
         # Générer le titre
         title = await generate_chat_title(messages)
-        
+
         # Mettre à jour le titre dans Meilisearch
         client = await get_meilisearch_client()
-        
-        await client.index(settings.CHAT_INDEX).update_documents([
-            {
-                "id": chat_id,
-                "title": title,
-                "updated_at": int(time.time())
-            }
-        ])
-        
+
+        await client.index(settings.CHAT_INDEX).update_documents(
+            [{"id": chat_id, "title": title, "updated_at": int(time.time())}]
+        )
+
         print(f"Title updated for chat {chat_id}: {title}")
-        
+
     except Exception as e:
         print(f"Error generating title for chat {chat_id}: {e}")
 
@@ -496,9 +507,12 @@ async def delete_chat(
         )
 
     # Delete associated messages
-    await client.index(settings.MESSAGE_INDEX).delete_documents(
-        {"filter": f"chat_id = {chat_id}"}
+
+    messages = await client.index(settings.MESSAGE_INDEX).get_documents(
+        filter=f"chat_id = {chat_id}"
     )
+    message_ids = [x["id"] for x in messages.results]
+    await client.index(settings.MESSAGE_INDEX).delete_documents(message_ids)
 
     # Delete the chat
     await client.index(settings.CHAT_INDEX).delete_document(chat_id)
@@ -508,32 +522,34 @@ async def delete_chat(
 
 @router.put("/{chat_id}/title")
 async def update_chat_title(
-    chat_id: str, 
+    chat_id: str,
     title_data: dict,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Met à jour le titre d'une conversation
     """
     client = await get_meilisearch_client()
-    
+
     # Vérifier que le chat existe et appartient à l'utilisateur
     chat_result = await client.index(settings.CHAT_INDEX).search(
         filter=f"id = {chat_id} AND user_id = {current_user.id}", limit=1
     )
-    
+
     if not chat_result.hits:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found"
         )
-    
+
     # Mettre à jour le titre
-    await client.index(settings.CHAT_INDEX).update_documents([
-        {
-            "id": chat_id,
-            "title": title_data.get("title"),
-            "updated_at": int(time.time())
-        }
-    ])
-    
+    await client.index(settings.CHAT_INDEX).update_documents(
+        [
+            {
+                "id": chat_id,
+                "title": title_data.get("title"),
+                "updated_at": int(time.time()),
+            }
+        ]
+    )
+
     return {"message": "Chat title updated successfully"}
