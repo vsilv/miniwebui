@@ -29,13 +29,25 @@ export const fetchChats = async () => {
   }
 };
 
-// Create a new chat
 export const createChat = async (
   model = "gemini-1.5-pro",
   systemPrompt = null
 ) => {
   try {
-    currentChat.setKey("isLoading", true);
+    // Créer un nouvel objet chat temporaire
+    const tempChat = {
+      id: null,
+      title: "",
+      model: "",
+      messages: [],
+      isLoading: true,
+    };
+
+    // Créer une copie de l'état actuel avant de le modifier
+    const previousChat = { ...currentChat.get() };
+
+    // Remplacer immédiatement par le nouvel état pour éviter d'affecter l'ancien chat
+    currentChat.set(tempChat);
 
     const data = {
       title: "New conversation",
@@ -48,7 +60,10 @@ export const createChat = async (
 
     // Update chats list
     const currentChats = chats.get();
-    chats.set([newChat, ...currentChats]);
+    
+    if (!currentChats.some(chat => chat.id === newChat.id)) {
+      chats.set([newChat, ...currentChats]);
+    }
 
     // Update current chat
     currentChat.set({
