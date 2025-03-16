@@ -16,16 +16,23 @@ import {
 } from "../store/chatStore";
 import { useChat } from '../hooks/useChat';
 
-
 const Chat = () => {
   const { chatId } = useParams();
   const navigate = useNavigate();
   const $currentChat = useStore(currentChat);
   const $models = useStore(models);
   const [isLoading, setIsLoading] = useState(false);
-  const isCreatingNewChat = isLoading && !chatId;
   const { isCreatingChat, handleNewChat } = useChat();
 
+  // Explicitly track if a chat is being created to prevent welcome screen flash
+  const [isNavigatingToNewChat, setIsNavigatingToNewChat] = useState(false);
+
+  // Handle creating a new chat with proper state management
+  const handleCreateChat = async () => {
+    // Set navigating state to prevent welcome screen from showing
+    setIsNavigatingToNewChat(true);
+    await handleNewChat();
+  };
 
   // Récupérer les modèles disponibles
   useEffect(() => {
@@ -51,11 +58,19 @@ const Chat = () => {
           setIsLoading(true);
           await fetchChat(chatId);
           setIsLoading(false);
+          // We have a chat ID, so we're not creating a new chat anymore
+          setIsNavigatingToNewChat(false);
         } catch (error) {
           console.error(`Erreur lors du chargement du chat ${chatId}:`, error);
           toast.error("Erreur lors du chargement de la conversation");
           setIsLoading(false);
+          setIsNavigatingToNewChat(false);
           navigate("/");
+        }
+      } else {
+        // No chat ID and not creating a new chat, so we can show welcome screen
+        if (!isNavigatingToNewChat) {
+          setIsLoading(false);
         }
       }
     };
@@ -63,13 +78,16 @@ const Chat = () => {
     loadChat();
   }, [chatId, navigate]);
 
-
-
-  return (
-    <div className="h-full flex flex-col">
-      {!chatId || (isLoading && !isCreatingChat) ? (
-        <WelcomeScreen onNewChat={handleNewChat} isLoading={isCreatingChat} />
-      ) : isCreatingNewChat ? (
+  // Decide what to render based on current state
+  const renderContent = () => {
+    // Case 1: No chat ID and not creating/navigating to new chat - show welcome screen
+    if (!chatId && !isNavigatingToNewChat) {
+      return <WelcomeScreen onNewChat={handleCreateChat} isLoading={isCreatingChat} />;
+    }
+    
+    // Case 2: Loading state - show loading spinner
+    if ((isLoading || isCreatingChat || isNavigatingToNewChat) && (!$currentChat.id || $currentChat.id !== chatId)) {
+      return (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent"></div>
@@ -78,22 +96,25 @@ const Chat = () => {
             </p>
           </div>
         </div>
-      ) : (
-        <>
-          <ChatHeader title={$currentChat.title} />
+      );
+    }
+    
+    // Case 3: Chat loaded - show chat interface
+    return (
+      <>
+        <ChatHeader title={$currentChat.title} />
+        <div className="flex-1 overflow-hidden flex flex-col px-4 py-2">
+          <Messages
+            messages={$currentChat.messages}
+            isLoading={$currentChat.isLoading}
+          />
+          <MessageInput chatId={chatId} isLoading={$currentChat.isLoading} />
+        </div>
+      </>
+    );
+  };
 
-          <div className="flex-1 overflow-hidden flex flex-col px-4 py-2">
-            <Messages
-              messages={$currentChat.messages}
-              isLoading={$currentChat.isLoading}
-            />
-
-            <MessageInput chatId={chatId} isLoading={$currentChat.isLoading} />
-          </div>
-        </>
-      )}
-    </div>
-  );
+  return <div className="h-full flex flex-col">{renderContent()}</div>;
 };
 
 export default Chat;

@@ -14,6 +14,11 @@ const Messages = ({ messages, isLoading }) => {
   // Filter out system messages (they are used for context but not displayed)
   const visibleMessages = messages.filter(message => message.role !== 'system');
   
+  // Check if the latest assistant message is still streaming
+  const hasStreamingMessage = visibleMessages.some(
+    message => message.role === 'assistant' && message.is_streaming === true
+  );
+
   return (
     <div className="flex-1 overflow-y-auto py-4 space-y-6">
       {visibleMessages.length === 0 ? (
@@ -29,8 +34,8 @@ const Messages = ({ messages, isLoading }) => {
             />
           ))}
           
-          {/* Show loading indicator for assistant response */}
-          {isLoading && (
+          {/* Show loading indicator for assistant response only if we don't have a streaming message */}
+          {isLoading && !hasStreamingMessage && (
             <div className="flex items-center space-x-2 px-4 py-3 rounded-lg bg-gray-100 dark:bg-dark-800 max-w-[85%] ml-4">
               <div className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500 animate-pulse"></div>
               <div className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500 animate-pulse" style={{ animationDelay: '0.2s' }}></div>

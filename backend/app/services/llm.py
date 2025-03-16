@@ -128,6 +128,8 @@ async def start_streaming_completion(request: CompletionRequest) -> str:
     
     # Convert messages to langchain format
     langchain_messages = convert_messages_to_langchain_format(request.messages)
+
+    print(langchain_messages)
     
     # Debug information
     print(f"Starting streaming completion with session_id: {session_id}")
@@ -158,11 +160,12 @@ async def start_streaming_completion(request: CompletionRequest) -> str:
         # Execute the streaming generation directly
         async for chunk in model.astream(langchain_messages):
             content = chunk.content
+            print("add chunk : ", content)
             full_response += content
             
             # Add token to Redis Stream
             try:
-                print("add chunk : ", content)
+               
                 await redis_client.xadd(
                     f"stream:{session_id}", 
                     {
