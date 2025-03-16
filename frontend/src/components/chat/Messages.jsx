@@ -1,26 +1,28 @@
-import React, { useEffect, useRef } from 'react';
-import Message from './Message';
+import React, { useEffect, useRef } from "react";
+import Message from "./Message";
 
 const Messages = ({ messages, isLoading }) => {
   const messagesEndRef = useRef(null);
-  
+
   // Scroll to bottom when messages change
   useEffect(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
-  
+
   // Filter out system messages (they are used for context but not displayed)
-  const visibleMessages = messages.filter(message => message.role !== 'system');
-  
+  const visibleMessages = messages.filter(
+    (message) => message.role !== "system"
+  );
+
   // Check if the latest assistant message is still streaming
   const hasStreamingMessage = visibleMessages.some(
-    message => message.role === 'assistant' && message.is_streaming === true
+    (message) => message.role === "assistant" && message.is_streaming === true
   );
 
   return (
-    <div className="flex-1 overflow-y-auto py-4 space-y-6">
+    <div className="flex-1 overflow-y-auto py-6 space-y-0 divide-y divide-gray-100 dark:divide-dark-800">
       {visibleMessages.length === 0 ? (
         <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
           Commencez la conversation en envoyant un message
@@ -28,21 +30,26 @@ const Messages = ({ messages, isLoading }) => {
       ) : (
         <>
           {visibleMessages.map((message) => (
-            <Message 
-              key={message.id} 
-              message={message} 
-            />
+            <Message key={message.id} message={message} />
           ))}
-          
+
           {/* Show loading indicator for assistant response only if we don't have a streaming message */}
           {isLoading && !hasStreamingMessage && (
-            <div className="flex items-center space-x-2 px-4 py-3 rounded-lg bg-gray-100 dark:bg-dark-800 max-w-[85%] ml-4">
-              <div className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500 animate-pulse"></div>
-              <div className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-              <div className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+            <div className="px-4 sm:px-8 md:px-12 pt-6 pb-2">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500 animate-pulse"></div>
+                <div
+                  className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500 animate-pulse"
+                  style={{ animationDelay: "0.2s" }}
+                ></div>
+                <div
+                  className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500 animate-pulse"
+                  style={{ animationDelay: "0.4s" }}
+                ></div>
+              </div>
             </div>
           )}
-          
+
           <div ref={messagesEndRef} />
         </>
       )}

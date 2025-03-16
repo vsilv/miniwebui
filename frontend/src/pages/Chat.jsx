@@ -7,21 +7,27 @@ import Messages from "../components/chat/Messages";
 import MessageInput from "../components/chat/MessageInput";
 import ChatHeader from "../components/chat/ChatHeader";
 import WelcomeScreen from "../components/chat/WelcomeScreen";
+import DocumentSelectionModal from "../components/chat/DocumentSelectionModal";
 import {
   currentChat,
   fetchChat,
   models,
   fetchModels,
+  sendMessage,
 } from "../store/chatStore";
 import { useChat } from '../hooks/useChat';
+import { documents, fetchDocuments } from "../store/knowledgeStore";
 
 const Chat = () => {
   const { chatId } = useParams();
   const navigate = useNavigate();
   const $currentChat = useStore(currentChat);
   const $models = useStore(models);
+  const $documents = useStore(documents);
   const [isLoading, setIsLoading] = useState(false);
   const { isCreatingChat, handleNewChat } = useChat();
+  const [showDocModal, setShowDocModal] = useState(false);
+  const [selectedDocs, setSelectedDocs] = useState([]);
 
   // Explicitly track if a chat is being created to prevent welcome screen flash
   const [isNavigatingToNewChat, setIsNavigatingToNewChat] = useState(false);
@@ -33,9 +39,27 @@ const Chat = () => {
     await handleNewChat();
   };
 
-  // Récupérer les modèles disponibles
+  // Handle creation of a new chat with a prompt suggestion
+  const handlePromptSelect = async (promptText) => {
+    setIsNavigatingToNewChat(true);
+    try {
+      // Create a new chat
+      const newChat = await handleNewChat();
+      
+      // Small delay to ensure chat is fully created before sending message
+      setTimeout(async () => {
+        await sendMessage(promptText, true);
+      }, 500);
+    } catch (error) {
+      console.error("Error handling prompt selection:", error);
+      toast.error("Erreur lors de la création de la conversation");
+      setIsNavigatingToNewChat(false);
+    }
+  };
+
+  // Récupérer les modèles disponibles et les documents
   useEffect(() => {
-    const loadModels = async () => {
+    const loadInitialData = async () => {
       if ($models.length === 0) {
         try {
           await fetchModels();
@@ -44,10 +68,28 @@ const Chat = () => {
           toast.error("Erreur lors du chargement des modèles");
         }
       }
+      
+      // Load documents for potential attachment
+      try {
+        await fetchDocuments();
+      } catch (error) {
+        console.error("Erreur lors du chargement des documents:", error);
+      }
     };
 
-    loadModels();
+    loadInitialData();
   }, []);
+
+  // Toggle document selection modal
+  const toggleDocModal = () => {
+    setShowDocModal(!showDocModal);
+  };
+
+  // Handle document selection
+  const handleDocSelection = (docs) => {
+    setSelectedDocs(docs);
+    setShowDocModal(false);
+  };
 
   // Charger le chat sélectionné
   useEffect(() => {
@@ -81,7 +123,13 @@ const Chat = () => {
   const renderContent = () => {
     // Case 1: No chat ID and not creating/navigating to new chat - show welcome screen
     if (!chatId && !isNavigatingToNewChat) {
-      return <WelcomeScreen onNewChat={handleCreateChat} isLoading={isCreatingChat} />;
+      return (
+        <WelcomeScreen 
+          onNewChat={handleCreateChat} 
+          isLoading={isCreatingChat} 
+          onPromptSelect={handlePromptSelect}
+        />
+      );
     }
     
     // Case 2: Loading state - show loading spinner
@@ -102,13 +150,30 @@ const Chat = () => {
     return (
       <>
         <ChatHeader />
-        <div className="flex-1 overflow-hidden flex flex-col px-4 py-2">
+        <div className="flex-1 overflow-hidden flex flex-col">
           <Messages
             messages={$currentChat.messages}
             isLoading={$currentChat.isLoading}
           />
-          <MessageInput chatId={chatId} isLoading={$currentChat.isLoading} />
+          <MessageInput 
+            chatId={chatId} 
+            isLoading={$currentChat.isLoading}
+            onDocumentSelect={toggleDocModal}
+            selectedDocs={selectedDocs}
+            onRemoveDoc={(docId) => setSelectedDocs(prev => prev.filter(doc => doc.id !== docId))}
+          />
         </div>
+        
+        {/* Document selection modal */}
+        {showDocModal && (
+          <DocumentSelectionModal
+            isOpen={showDocModal}
+            onClose={() => setShowDocModal(false)}
+            onSelect={handleDocSelection}
+            documents={$documents}
+            selectedDocs={selectedDocs}
+          />
+        )}
       </>
     );
   };

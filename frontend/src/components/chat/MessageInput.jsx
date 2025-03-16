@@ -1,38 +1,54 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
-import { Send, Paperclip, Mic, MicOff, Loader } from 'lucide-react';
-import TextareaAutosize from 'react-textarea-autosize';
-import { sendMessage } from '../../store/chatStore';
+import React, { useState, useRef, useEffect } from "react";
+import { toast } from "react-hot-toast";
+import {
+  Send,
+  Paperclip,
+  Mic,
+  MicOff,
+  Loader,
+  X,
+  FileText,
+} from "lucide-react";
+import TextareaAutosize from "react-textarea-autosize";
+import { sendMessage } from "../../store/chatStore";
 
-const MessageInput = ({ chatId, isLoading }) => {
-  const [message, setMessage] = useState('');
+const MessageInput = ({
+  chatId,
+  isLoading,
+  onDocumentSelect,
+  selectedDocs = [],
+  onRemoveDoc,
+}) => {
+  const [message, setMessage] = useState("");
   const [file, setFile] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+  const [attachedDocs, setAttachedDocs] = useState([]);
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
-  
+
   // Speech recognition setup
   const recognition = useRef(null);
-  
+
   // Initialize speech recognition
   useEffect(() => {
     if (window.webkitSpeechRecognition || window.SpeechRecognition) {
-      const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
+      const SpeechRecognition =
+        window.webkitSpeechRecognition || window.SpeechRecognition;
       recognition.current = new SpeechRecognition();
       recognition.current.continuous = true;
       recognition.current.interimResults = true;
-      recognition.current.lang = 'fr-FR'; // Set language
-      
+      recognition.current.lang = "fr-FR"; // Set language
+
       recognition.current.onresult = (event) => {
         const transcript = Array.from(event.results)
-          .map(result => result[0])
-          .map(result => result.transcript)
-          .join('');
-        
+          .map((result) => result[0])
+          .map((result) => result.transcript)
+          .join("");
+
         setMessage(transcript);
-        
+
         // Auto-submit after a pause in speaking
         if (event.results[0].isFinal) {
           setTimeout(() => {
@@ -49,61 +65,70 @@ const MessageInput = ({ chatId, isLoading }) => {
           }, 1500);
         }
       };
-      
+
       recognition.current.onerror = (event) => {
-        console.error('Speech recognition error', event.error);
+        console.error("Speech recognition error", event.error);
         setIsRecording(false);
         setIsListening(false);
-        toast.error('Erreur de reconnaissance vocale');
+        toast.error("Erreur de reconnaissance vocale");
       };
-      
+
       recognition.current.onend = () => {
         setIsRecording(false);
       };
     }
-    
+
     return () => {
       if (recognition.current) {
         stopRecording();
       }
     };
   }, []);
-  
-  // Focus textarea on component mount
+
+  // Focus textarea on component mount and chat id changes
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.focus();
     }
-  }, []);
-  
+  }, [chatId]);
+
+  // Refocus after message is sent
+  useEffect(() => {
+    if (!isLoading && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [isLoading]);
+
   // Start voice recording
   const startRecording = () => {
     if (!recognition.current) {
-      toast.error('La reconnaissance vocale n\'est pas supportée par votre navigateur');
+      toast.error(
+        "La reconnaissance vocale n'est pas supportée par votre navigateur"
+      );
       return;
     }
-    
+
     try {
       recognition.current.start();
       setIsRecording(true);
       setIsListening(true);
-      toast.success('Écoute en cours...');
+      toast.success("Écoute en cours...");
     } catch (error) {
-      console.error('Error starting recognition:', error);
-      toast.error('Erreur lors du démarrage de la reconnaissance vocale');
+      console.error("Error starting recognition:", error);
+      toast.error("Erreur lors du démarrage de la reconnaissance vocale");
     }
   };
-  
+
   // Stop voice recording
   const stopRecording = () => {
     if (recognition.current && isRecording) {
       recognition.current.stop();
       setIsRecording(false);
       setIsListening(false);
-      toast.success('Enregistrement terminé');
+      toast.success("Enregistrement terminé");
     }
   };
-  
+
   // Toggle voice recording
   const toggleRecording = () => {
     if (isRecording) {
@@ -112,63 +137,117 @@ const MessageInput = ({ chatId, isLoading }) => {
       startRecording();
     }
   };
-  
+
   // Handle file input
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
       setFile(selectedFile);
-      toast.success(`Fichier sélectionné: ${selectedFile.name}`);
+
+      // Add to attached docs
+      setAttachedDocs((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          name: selectedFile.name,
+          type: selectedFile.type,
+          size: selectedFile.size,
+        },
+      ]);
+
+      toast.success(`Fichier ajouté: ${selectedFile.name}`);
     }
   };
-  
-  // Handle file button click
+
+  // Handle file button click - now opens the document modal
   const handleFileButtonClick = () => {
-    fileInputRef.current.click();
+    if (typeof onDocumentSelect === "function") {
+      onDocumentSelect();
+    } else {
+      // Fallback to direct file input if modal handler not provided
+      fileInputRef.current.click();
+    }
   };
-  
+
   // Remove attached file
   const removeFile = () => {
     setFile(null);
-    fileInputRef.current.value = '';
+    fileInputRef.current.value = "";
   };
-  
+
+  // Remove attached document
+  const removeAttachedDoc = (docId) => {
+    setAttachedDocs((prev) => prev.filter((doc) => doc.id !== docId));
+  };
+
   // Submit the message
   const handleSendMessage = async () => {
     const trimmedMessage = message.trim();
-    if (!trimmedMessage && !file) return;
-    
+    const allDocs = [...attachedDocs, ...selectedDocs];
+
+    if (!trimmedMessage && !file && allDocs.length === 0) return;
+
     // Reset input
-    setMessage('');
+    setMessage("");
     const currentFile = file;
+    const currentAttachedDocs = [...attachedDocs];
+    const currentSelectedDocs = [...selectedDocs];
     setFile(null);
-    
+    setAttachedDocs([]);
+
+    // Clear selected documents from parent component if handler provided
+    if (typeof onRemoveDoc === "function") {
+      currentSelectedDocs.forEach((doc) => onRemoveDoc(doc.id));
+    }
+
     try {
+      // If there are attached documents, mention them in the message
+      let finalMessage = trimmedMessage;
+
+      const allDocsToMention = [...currentAttachedDocs, ...currentSelectedDocs];
+
+      if (allDocsToMention.length > 0) {
+        const docsInfo = allDocsToMention
+          .map((doc) => doc.name || doc.title)
+          .join(", ");
+        if (trimmedMessage) {
+          finalMessage = `${trimmedMessage}\n\n(Documents attachés: ${docsInfo})`;
+        } else {
+          finalMessage = `Voici les documents suivants: ${docsInfo}`;
+        }
+      }
+
       // If there's a file, handle it first
       if (currentFile) {
         // TODO: Implement file upload and processing
         toast.success(`Traitement du fichier ${currentFile.name}`);
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
-      
+
       // Send text message
-      if (trimmedMessage) {
-        await sendMessage(trimmedMessage, true); // true for streaming
+      if (finalMessage) {
+        await sendMessage(finalMessage, true); // true for streaming
       }
+
+      // Refocus the textarea after sending
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+        }
+      }, 0);
     } catch (error) {
-      console.error('Erreur lors de l\'envoi du message:', error);
-      toast.error('Erreur lors de l\'envoi du message');
+      console.error("Erreur lors de l'envoi du message:", error);
+      toast.error("Erreur lors de l'envoi du message");
     }
   };
-  
-  // Handle keyboard shortcuts (Ctrl+Enter to send)
+
+  // Handle keyboard shortcuts (Enter to send)
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
+    if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
-
   return (
     <div className="border-t border-gray-200 dark:border-dark-700 pt-3 px-2 pb-3">
       {/* File attachment preview */}
@@ -186,7 +265,7 @@ const MessageInput = ({ chatId, isLoading }) => {
           </button>
         </div>
       )}
-      
+
       <div className="flex items-end gap-2">
         <div className="flex-1 relative">
           <TextareaAutosize
@@ -200,7 +279,7 @@ const MessageInput = ({ chatId, isLoading }) => {
             disabled={isLoading || isProcessingVoice}
           />
         </div>
-        
+
         {/* Action buttons */}
         <div className="flex gap-2">
           {/* File attachment button */}
@@ -212,7 +291,7 @@ const MessageInput = ({ chatId, isLoading }) => {
           >
             <Paperclip size={20} />
           </button>
-          
+
           {/* Hidden file input */}
           <input
             type="file"
@@ -221,25 +300,27 @@ const MessageInput = ({ chatId, isLoading }) => {
             className="hidden"
             accept=".pdf,.doc,.docx,.txt"
           />
-          
+
           {/* Voice input button */}
           <button
             onClick={toggleRecording}
             disabled={isLoading || isProcessingVoice}
             className={`p-3 rounded-lg disabled:opacity-50 ${
-              isRecording 
-                ? 'bg-red-500 text-white animate-pulse' 
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 bg-gray-100 dark:bg-dark-700'
+              isRecording
+                ? "bg-red-500 text-white animate-pulse"
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 bg-gray-100 dark:bg-dark-700"
             }`}
             aria-label={isRecording ? "Stop recording" : "Start recording"}
           >
             {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
           </button>
-          
+
           {/* Send button */}
           <button
             onClick={handleSendMessage}
-            disabled={(!message.trim() && !file) || isLoading || isProcessingVoice}
+            disabled={
+              (!message.trim() && !file) || isLoading || isProcessingVoice
+            }
             className="p-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg disabled:opacity-50"
             aria-label="Send message"
           >
