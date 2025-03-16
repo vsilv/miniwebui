@@ -257,7 +257,7 @@ const MessageInput = ({
   };
 
   return (
-    <div className="sticky bottom-0 z-20 pt-2 px-4 pb-4 bg-gradient-to-b from-transparent via-light-100/90 to-light-100 dark:from-transparent dark:via-dark-900/90 dark:to-dark-900 backdrop-blur-md">
+    <div className="sticky bottom-0 z-10 pt-2 px-4 pb-4 bg-gradient-to-b from-transparent via-light-100/90 to-light-100 dark:from-transparent dark:via-dark-900/90 dark:to-dark-900 backdrop-blur-md">
       {/* Selected documents badges */}
       {selectedDocs.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 mb-2 px-1 py-1">
@@ -282,7 +282,7 @@ const MessageInput = ({
 
       {/* Main input container */}
       <div className="relative">
-        <div className="flex flex-col rounded-xl shadow-md bg-white dark:bg-dark-800 border border-light-300/50 dark:border-dark-700/50 overflow-hidden">
+        <div className="flex flex-col rounded-xl shadow-md bg-white dark:bg-dark-800 border border-light-300/50 dark:border-dark-700/50 ">
           {/* Text input area */}
           <div className="relative">
             <TextareaAutosize
@@ -311,7 +311,7 @@ const MessageInput = ({
                 
                 {/* Options dropdown menu */}
                 {showOptions && (
-                  <div className="absolute bottom-full right-0 mb-2 w-56 bg-white dark:bg-dark-800 rounded-xl shadow-lg border border-light-300/50 dark:border-dark-700/50 z-10 overflow-hidden">
+                  <div className="absolute bottom-full right-0 mb-2 w-56 bg-white dark:bg-dark-800 rounded-xl shadow-lg border border-light-300/50 dark:border-dark-700/50 z-50 ">
                     <div className="p-3 border-b border-light-300/50 dark:border-dark-700/50">
                       <h3 className="font-medium text-dark-800 dark:text-light-200 text-sm">
                         Actions

@@ -197,7 +197,7 @@ const ChatHeader = () => {
           </button>
           
           {showSettings && (
-            <div className="absolute right-0 mt-2 w-64 rounded-xl shadow-medium bg-white dark:bg-dark-800 border border-dark-200/50 dark:border-dark-700 z-10 overflow-hidden">
+            <div className="absolute right-0 mt-2 w-64 rounded-xl shadow-medium bg-white dark:bg-dark-800 border border-dark-200/50 dark:border-dark-700 z-20 overflow-hidden">
               <div className="px-4 py-3 border-b border-dark-200 dark:border-dark-700">
                 <h3 className="font-medium text-dark-800 dark:text-light-200 mb-1">
                   Modèle

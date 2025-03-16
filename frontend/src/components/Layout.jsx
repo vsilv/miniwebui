@@ -79,7 +79,7 @@ const Layout = ({ children }) => {
           </div>
           
           {/* Content container */}
-          <div className="relative z-10">
+          <div className="relative z-10 h-full">
             {children}
           </div>
         </main>
