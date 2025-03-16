@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+// frontend/src/pages/Chat.jsx
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useStore } from "@nanostores/react";
 import { toast } from "react-hot-toast";
@@ -28,9 +29,17 @@ const Chat = () => {
   const { isCreatingChat, handleNewChat } = useChat();
   const [showDocModal, setShowDocModal] = useState(false);
   const [selectedDocs, setSelectedDocs] = useState([]);
+  const messagesEndRef = useRef(null);
 
   // Explicitly track if a chat is being created to prevent welcome screen flash
   const [isNavigatingToNewChat, setIsNavigatingToNewChat] = useState(false);
+
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [$currentChat.messages]);
 
   // Handle creating a new chat with proper state management
   const handleCreateChat = async () => {
@@ -48,7 +57,7 @@ const Chat = () => {
       
       // Small delay to ensure chat is fully created before sending message
       setTimeout(async () => {
-        await sendMessage(promptText, true);
+        await sendMessage(promptText, [], true);
       }, 500);
     } catch (error) {
       console.error("Error handling prompt selection:", error);
@@ -136,10 +145,13 @@ const Chat = () => {
     if ((isLoading || isCreatingChat || isNavigatingToNewChat) && (!$currentChat.id || $currentChat.id !== chatId)) {
       return (
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-300">
+          <div className="flex flex-col items-center text-center">
+            <div className="h-12 w-12 rounded-full border-4 border-primary-600 border-r-transparent animate-spin mb-4"></div>
+            <p className="text-lg font-medium text-dark-800 dark:text-light-200 mb-1">
               Chargement...
+            </p>
+            <p className="text-dark-500 dark:text-dark-400 max-w-sm">
+              Préparation de votre espace de conversation
             </p>
           </div>
         </div>
@@ -154,6 +166,7 @@ const Chat = () => {
           <Messages
             messages={$currentChat.messages}
             isLoading={$currentChat.isLoading}
+            messagesEndRef={messagesEndRef}
           />
           <MessageInput 
             chatId={chatId} 
@@ -178,7 +191,21 @@ const Chat = () => {
     );
   };
 
-  return <div className="h-full flex flex-col">{renderContent()}</div>;
+  return (
+    <div className="h-full flex flex-col relative">
+      {/* Chat interface with subtle background decorations */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-20 -right-32 w-96 h-96 rounded-full bg-primary-100/20 dark:bg-primary-900/10 blur-3xl"></div>
+        <div className="absolute -bottom-20 -left-32 w-96 h-96 rounded-full bg-secondary-100/20 dark:bg-secondary-900/10 blur-3xl"></div>
+      </div>
+      
+      {/* Main content */}
+      <div className="relative z-10 h-full flex flex-col">
+        {renderContent()}
+      </div>
+      <div ref={messagesEndRef} />
+    </div>
+  );
 };
 
 export default Chat;

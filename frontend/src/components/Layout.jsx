@@ -1,7 +1,7 @@
+// frontend/src/components/Layout.jsx
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import { Sun, Moon } from 'lucide-react';
 
 const Layout = ({ children }) => {
   const [darkMode, setDarkMode] = useState(false);
@@ -22,6 +22,9 @@ const Layout = ({ children }) => {
     const savedTheme = localStorage.getItem('theme') || 'default';
     setTheme(savedTheme);
     applyTheme(savedTheme);
+
+    // Ajouter la classe smooth-transitions pour les transitions CSS
+    document.body.classList.add('transition-colors', 'duration-300');
   }, []);
 
   // Fonction pour changer le mode dark/light
@@ -46,14 +49,14 @@ const Layout = ({ children }) => {
 
   // Appliquer le thème à l'élément root
   const applyTheme = (themeName) => {
-    document.body.className = '';
+    document.body.className = 'transition-colors duration-300';
     if (themeName !== 'default') {
       document.body.classList.add(themeName);
     }
   };
 
   return (
-    <div className={`flex h-screen ${theme}`}>
+    <div className={`flex h-screen ${theme} bg-light-50 dark:bg-dark-950`}>
       <Sidebar 
         isOpen={sidebarOpen} 
         onClose={() => setSidebarOpen(false)} 
@@ -68,18 +71,18 @@ const Layout = ({ children }) => {
           onDarkModeToggle={toggleDarkMode}
         />
         
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-dark-900">
-          {children}
+        <main className="relative flex-1 overflow-x-hidden overflow-y-auto bg-light-100 dark:bg-dark-900">
+          {/* Background decorative elements */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute -top-48 -right-48 w-96 h-96 rounded-full bg-primary-400/5 dark:bg-primary-500/5 blur-3xl"></div>
+            <div className="absolute -bottom-48 -left-48 w-96 h-96 rounded-full bg-secondary-400/5 dark:bg-secondary-500/5 blur-3xl"></div>
+          </div>
+          
+          {/* Content container */}
+          <div className="relative z-10">
+            {children}
+          </div>
         </main>
-        
-        {/* Toggle dark mode button (fixed) */}
-        <button
-          onClick={toggleDarkMode}
-          className="fixed bottom-4 right-4 p-2 rounded-full bg-gray-200 dark:bg-dark-700 text-gray-800 dark:text-gray-200 shadow-lg"
-          aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-        >
-          {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
       </div>
     </div>
   );

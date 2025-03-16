@@ -1,23 +1,24 @@
-/* Importer les polices */
+/* frontend/src/index.css */
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap");
 @import "tailwindcss";
 
 @theme {
   /* Couleurs principales */
-  --color-primary-50: #f0f9ff;
-  --color-primary-100: #e0f2fe;
-  --color-primary-200: #bae6fd;
-  --color-primary-300: #7dd3fc;
-  --color-primary-400: #38bdf8;
-  --color-primary-500: #0ea5e9;
-  --color-primary-600: #0284c7;
-  --color-primary-700: #0369a1;
-  --color-primary-800: #075985;
-  --color-primary-900: #0c4a6e;
-  --color-primary-950: #082f49;
+  --color-primary-50: #eefbfc;
+  --color-primary-100: #d6f3f7;
+  --color-primary-200: #b0e5ee;
+  --color-primary-300: #7dd2e1;
+  --color-primary-400: #43b7cc;
+  --color-primary-500: #2a9db2;
+  --color-primary-600: #208097;
+  --color-primary-700: #1d667a;
+  --color-primary-800: #1d5465;
+  --color-primary-900: #1c4755;
+  --color-primary-950: #0d2e3a;
 
-  /* Variante sombre (pour le mode sombre) */
+  /* Variante sombre */
   --color-dark-50: #f8fafc;
   --color-dark-100: #f1f5f9;
   --color-dark-200: #e2e8f0;
@@ -32,34 +33,39 @@
 
   /* Polices */
   --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display: Lexend, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 
   /* Ombrages */
-  --shadow-message: 0 2px 6px rgba(0, 0, 0, 0.05);
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-soft: 0 5px 15px rgba(0, 0, 0, 0.05);
+  --shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.1);
+  --shadow-elevated: 0 20px 40px -10px rgba(0, 0, 0, 0.15);
 
   /* Bordures */
   --rounded-message: 0.75rem;
+  --rounded-card: 1rem;
+  --rounded-btn: 0.5rem;
 
   /* Hauteur maximale */
-  --max-height-chat: calc(100vh - 180px);
+  --max-height-chat: calc(100vh - 170px);
 }
 
 /* Variables globales */
 :root {
-  --sidebar-width: 260px;
-  --header-height: 60px;
+  --sidebar-width: 280px;
+  --header-height: 64px;
   --footer-height: 50px;
+  --transition-speed: 0.3s;
 }
 
 /* Styles de base */
 html {
-  @apply h-full antialiased;
+  @apply h-full antialiased scroll-smooth;
 }
 
 body {
-  @apply h-full font-sans text-base bg-white dark:bg-dark-900 text-gray-900 dark:text-gray-100;
+  @apply h-full font-sans text-base bg-light-50 dark:bg-dark-950 text-dark-900 dark:text-light-100;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
 #root,
@@ -69,8 +75,8 @@ body {
 
 /* Scrollbars personnalisées */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -78,28 +84,28 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 dark:bg-dark-600 rounded-full;
+  @apply bg-dark-300/50 dark:bg-dark-600/50 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400 dark:bg-dark-500;
+  @apply bg-dark-400/60 dark:bg-dark-500/60;
 }
 
 /* Styles markdown */
 .markdown {
-  @apply text-gray-800 dark:text-gray-200;
+  @apply text-dark-800 dark:text-light-200 leading-relaxed;
 }
 
 .markdown h1 {
-  @apply text-2xl font-bold mt-6 mb-4;
+  @apply text-2xl font-display font-bold mt-6 mb-4 text-dark-900 dark:text-light-50;
 }
 
 .markdown h2 {
-  @apply text-xl font-bold mt-5 mb-3;
+  @apply text-xl font-display font-bold mt-5 mb-3 text-dark-900 dark:text-light-50;
 }
 
 .markdown h3 {
-  @apply text-lg font-bold mt-4 mb-2;
+  @apply text-lg font-bold mt-4 mb-2 text-dark-900 dark:text-light-50;
 }
 
 .markdown p {
@@ -119,19 +125,19 @@ body {
 }
 
 .markdown blockquote {
-  @apply border-l-4 border-gray-300 dark:border-dark-600 pl-4 italic my-3 text-gray-600 dark:text-gray-400;
+  @apply border-l-4 border-primary-200 dark:border-primary-800/60 pl-4 italic my-3 text-dark-600 dark:text-light-400 bg-primary-50/50 dark:bg-primary-900/20 py-2 rounded-r;
 }
 
 .markdown pre {
-  @apply bg-gray-100 dark:bg-dark-800 p-3 rounded my-3 overflow-x-auto;
+  @apply bg-dark-800 text-light-100 p-4 rounded-lg my-3 overflow-x-auto;
 }
 
 .markdown code {
-  @apply font-mono text-sm bg-gray-100 dark:bg-dark-800 px-1 py-0.5 rounded;
+  @apply font-mono text-sm bg-dark-100/50 dark:bg-dark-800 px-1.5 py-0.5 rounded text-dark-800 dark:text-light-200;
 }
 
 .markdown pre code {
-  @apply bg-transparent p-0;
+  @apply bg-transparent p-0 text-light-100;
 }
 
 .markdown table {
@@ -139,17 +145,16 @@ body {
 }
 
 .markdown th {
-  @apply border border-gray-300 dark:border-dark-700 px-3 py-2 bg-gray-100 dark:bg-dark-800;
+  @apply border border-dark-300 dark:border-dark-700 px-3 py-2 bg-dark-100 dark:bg-dark-800 text-left;
 }
 
 .markdown td {
-  @apply border border-gray-300 dark:border-dark-700 px-3 py-2;
+  @apply border border-dark-300 dark:border-dark-700 px-3 py-2;
 }
 
 /* Animation de chargement des messages */
 @keyframes pulse {
-  0%,
-  100% {
+  0%, 100% {
     opacity: 0.5;
   }
   50% {
@@ -161,70 +166,116 @@ body {
   animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Thème Rose Pine (adapté depuis les fichiers CSS) */
-.rose-pine * {
-  color: #e0def4 !important;
-  stroke: #907aa9 !important;
+/* Boutons */
+.btn {
+  @apply inline-flex items-center justify-center px-4 py-2 rounded-md font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
 }
 
-.rose-pine .app {
-  background-color: #1f1d2e !important;
+.btn-primary {
+  @apply bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500;
 }
 
-.rose-pine .sidebar {
-  background-color: #191724;
+.btn-secondary {
+  @apply bg-dark-100 dark:bg-dark-700 hover:bg-dark-200 dark:hover:bg-dark-600 text-dark-800 dark:text-light-100 focus:ring-dark-400;
 }
 
-.rose-pine .header {
-  background-color: #26233a;
+.btn-accent {
+  @apply bg-accent-600 hover:bg-accent-700 text-white focus:ring-accent-500;
 }
 
-.rose-pine .chat-input {
-  background: #393552;
+.btn-outline {
+  @apply border border-dark-300 dark:border-dark-600 hover:bg-dark-100 dark:hover:bg-dark-700 text-dark-800 dark:text-light-100 focus:ring-dark-400;
 }
 
-.rose-pine .message-user {
-  background-color: #403d52;
+.btn-danger {
+  @apply bg-red-600 hover:bg-red-700 text-white focus:ring-red-500;
 }
 
-.rose-pine .message-assistant {
-  background-color: #2a273f;
+/* Cards */
+.card {
+  @apply bg-white dark:bg-dark-800 rounded-xl shadow-soft border border-light-300/30 dark:border-dark-700/50;
 }
 
-.rose-pine .button-primary {
-  background-color: #31748f;
+.card-header {
+  @apply px-5 py-4 border-b border-light-300/30 dark:border-dark-700/50 font-medium;
 }
 
-/* Thème Rose Pine Dawn (adapté depuis les fichiers CSS) */
-.rose-pine-dawn * {
-  color: #575279 !important;
-  stroke: #d7827e !important;
+.card-body {
+  @apply p-5;
 }
 
-.rose-pine-dawn .app {
-  background-color: #faf4ed !important;
+.card-footer {
+  @apply px-5 py-4 border-t border-light-300/30 dark:border-dark-700/50;
 }
 
-.rose-pine-dawn .sidebar {
-  background-color: #fffaf3;
+/* Forms */
+.form-input {
+  @apply w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md shadow-sm bg-white dark:bg-dark-800 text-dark-900 dark:text-light-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500;
 }
 
-.rose-pine-dawn .header {
-  background-color: #f2e9e1;
+.form-textarea {
+  @apply w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md shadow-sm bg-white dark:bg-dark-800 text-dark-900 dark:text-light-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500;
 }
 
-.rose-pine-dawn .chat-input {
-  background: #cecacd;
+.form-select {
+  @apply w-full px-3 py-2 border border-dark-300 dark:border-dark-600 rounded-md shadow-sm bg-white dark:bg-dark-800 text-dark-900 dark:text-light-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500;
 }
 
-.rose-pine-dawn .message-user {
-  background-color: #dfdad9;
+.form-checkbox {
+  @apply rounded border-dark-300 dark:border-dark-600 text-primary-600 focus:ring-primary-500;
 }
 
-.rose-pine-dawn .message-assistant {
-  background-color: #f2e9e1;
+.form-radio {
+  @apply border-dark-300 dark:border-dark-600 text-primary-600 focus:ring-primary-500;
 }
 
-.rose-pine-dawn .button-primary {
-  background-color: #56949f;
+/* Effet de gradient */
+.bg-gradient {
+  background: linear-gradient(270deg, #2a9db2, #10b981, #3994ff);
+  background-size: 600% 600%;
+  animation: gradient 15s ease infinite;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Styles spécifiques pour le chat */
+.chat-input {
+  @apply p-3 border border-light-300 dark:border-dark-700 rounded-xl bg-light-100 dark:bg-dark-800 focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+  box-shadow: var(--shadow-inner-soft);
+}
+
+/* Transition de page */
+.page-transition {
+  @apply transition-opacity duration-300;
+}
+
+.page-enter {
+  @apply opacity-0;
+}
+
+.page-enter-active {
+  @apply opacity-100;
+}
+
+.page-exit {
+  @apply opacity-100;
+}
+
+.page-exit-active {
+  @apply opacity-0;
+}
+
+/* Glassmorphism pour le header */
+.glass-effect {
+  @apply bg-white/80 dark:bg-dark-900/80 backdrop-blur-md border-b border-light-300/30 dark:border-dark-700/50;
 }
