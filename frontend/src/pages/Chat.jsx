@@ -10,7 +10,6 @@ import WelcomeScreen from "../components/chat/WelcomeScreen";
 import {
   currentChat,
   fetchChat,
-  createChat,
   models,
   fetchModels,
 } from "../store/chatStore";
@@ -102,7 +101,7 @@ const Chat = () => {
     // Case 3: Chat loaded - show chat interface
     return (
       <>
-        <ChatHeader title={$currentChat.title} />
+        <ChatHeader />
         <div className="flex-1 overflow-hidden flex flex-col px-4 py-2">
           <Messages
             messages={$currentChat.messages}

@@ -7,12 +7,12 @@ import uuid
 import redis.asyncio as redis
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.schema import HumanMessage, AIMessage, SystemMessage
+from app.db.redis import get_redis_client
 
 from app.models.models import CompletionRequest
 from app.core.config import settings
 
-# Initialize Redis client
-redis_client = redis.Redis.from_url(settings.REDIS_URL)
+redis_client = get_redis_client()
 
 
 def convert_messages_to_langchain_format(messages: List[Dict[str, str]]):

@@ -1,25 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Edit2, Settings, Share2 } from 'lucide-react';
 import { useStore } from '@nanostores/react';
-import { currentChat, models, selectedModel } from '../../store/chatStore';
+import { currentChat, models, selectedModel, updateChatTitle } from '../../store/chatStore';
+import { toast } from 'react-hot-toast';
 
-const ChatHeader = ({ title }) => {
+const ChatHeader = () => {
+  const $currentChat = useStore(currentChat);
   const $models = useStore(models);
   const $selectedModel = useStore(selectedModel);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [newTitle, setNewTitle] = useState(title);
+  const [newTitle, setNewTitle] = useState($currentChat.title || 'New conversation');
   const [showSettings, setShowSettings] = useState(false);
   
+  // Mettre à jour le state local quand le titre change
+  useEffect(() => {
+    setNewTitle($currentChat.title || 'New conversation');
+  }, [$currentChat.title]);
+  
   // Mettre à jour le titre du chat
-  const updateTitle = async () => {
-    if (newTitle.trim() && newTitle !== title) {
+  const handleUpdateTitle = async () => {
+    if (newTitle.trim() && newTitle !== $currentChat.title) {
       try {
-        // TODO: Implement title update API call
-        // For now, we'll just update the local state
-        currentChat.setKey('title', newTitle);
+        await updateChatTitle($currentChat.id, newTitle);
+        toast.success('Titre mis à jour');
       } catch (error) {
         console.error('Erreur lors de la mise à jour du titre:', error);
+        toast.error('Erreur lors de la mise à jour du titre');
+        
+        // Restaurer le titre original en cas d'erreur
+        setNewTitle($currentChat.title || 'New conversation');
       }
+    } else {
+      // Même si on n'a pas changé, on remet la valeur du store pour s'assurer qu'elle est correcte
+      setNewTitle($currentChat.title || 'New conversation');
     }
     
     setIsEditingTitle(false);
@@ -38,7 +51,7 @@ const ChatHeader = ({ title }) => {
           <form 
             onSubmit={(e) => {
               e.preventDefault();
-              updateTitle();
+              handleUpdateTitle();
             }}
             className="flex items-center"
           >
@@ -48,18 +61,18 @@ const ChatHeader = ({ title }) => {
               onChange={(e) => setNewTitle(e.target.value)}
               className="border border-gray-300 dark:border-dark-600 rounded-md px-2 py-1 text-sm bg-white dark:bg-dark-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
               autoFocus
-              onBlur={updateTitle}
+              onBlur={handleUpdateTitle}
             />
           </form>
         ) : (
           <h2 className="text-lg font-medium text-gray-800 dark:text-gray-200 truncate max-w-md">
-            {title}
+            {$currentChat.title || 'New conversation'}
           </h2>
         )}
         
         <button
           onClick={() => {
-            setNewTitle(title);
+            setNewTitle($currentChat.title || 'New conversation');
             setIsEditingTitle(!isEditingTitle);
           }}
           className="ml-2 p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 rounded-full"

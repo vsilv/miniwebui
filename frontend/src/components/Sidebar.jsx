@@ -12,9 +12,9 @@ import {
   ChevronRight,
   ChevronDown,
 } from "lucide-react";
-import { chats, fetchChats, createChat, deleteChat } from "../store/chatStore";
+import { chats, fetchChats, deleteChat, updateChatTitle } from "../store/chatStore";
 import { useChat } from '../hooks/useChat';
-
+import { toast } from "react-hot-toast";
 
 const Sidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
@@ -26,7 +26,6 @@ const Sidebar = ({ isOpen, onClose }) => {
   const [newChatTitle, setNewChatTitle] = useState("");
   const [folderOpen, setFolderOpen] = useState(true);
   const { isCreatingChat, handleNewChat } = useChat();
-
 
   // Filtrer les chats en fonction de la recherche
   const filteredChats = $chats.filter((chat) =>

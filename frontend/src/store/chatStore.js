@@ -55,8 +55,7 @@ export const createChat = async (
     const response = await api.post("chat", { json: data }).json();
     const newChat = response;
 
-    // Update chats list - REMOVE THE DUPLICATE UPDATE
-    // We'll handle this here, not in the hook
+    // Update chats list
     const currentChats = chats.get();
     chats.set([newChat, ...currentChats]);
 
@@ -104,6 +103,32 @@ export const deleteChat = async (chatId) => {
   }
 };
 
+// Update chat title
+export const updateChatTitle = async (chatId, newTitle) => {
+  try {
+    await api.put(`chat/${chatId}/title`, {
+      json: { title: newTitle }
+    });
+
+    // Update title in current chat if it's the active chat
+    if (currentChat.get().id === chatId) {
+      currentChat.setKey("title", newTitle);
+    }
+
+    // Update title in chats list
+    const updatedChats = chats.get().map(chat => 
+      chat.id === chatId ? {...chat, title: newTitle} : chat
+    );
+    
+    chats.set(updatedChats);
+
+    return true;
+  } catch (error) {
+    console.error(`Error updating chat title ${chatId}:`, error);
+    throw error;
+  }
+};
+
 // Fetch available models
 export const fetchModels = async () => {
   try {
@@ -140,11 +165,7 @@ export const fetchChat = async (chatId) => {
   }
 };
 
-// Update just the sendMessage function in your chatStore.js
-
-// Update just the sendMessage function in your chatStore.js
-
-// Updated sendMessage function that generates message ID on client side
+// Send a message and process the response
 export const sendMessage = async (content, streaming = true) => {
   const chatId = currentChat.get().id;
   if (!chatId) return null;
@@ -204,12 +225,12 @@ export const sendMessage = async (content, streaming = true) => {
         ];
         currentChat.setKey("messages", updatedMessages);
 
-        // Set up SSE connection
+        // Set up SSE connection for streaming response
         const eventSource = new EventSource(
           `/api/chat/stream/${session_id}/events`
         );
 
-        // Handle new content chunks
+        // Handle incoming stream data
         eventSource.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
@@ -233,6 +254,31 @@ export const sendMessage = async (content, streaming = true) => {
               // If stream is done, remove the streaming flag
               if (isDone) {
                 updatedMessage.is_streaming = false;
+                
+                // Check if the chat title has been updated on the server
+                setTimeout(async () => {
+                  try {
+                    // Fetch the latest chat data to get any server-side title updates
+                    const chatData = await api.get(`chat/${chatId}`).json();
+                    
+                    // Only update if title has changed
+                    if (chatData.title && chatData.title !== currentChat.get().title && 
+                        chatData.title !== "New conversation") {
+                      
+                      // Update title in current chat
+                      currentChat.setKey("title", chatData.title);
+                      
+                      // Also update the title in the chats list
+                      const updatedChats = chats.get().map(chat => 
+                        chat.id === chatId ? {...chat, title: chatData.title} : chat
+                      );
+                      
+                      chats.set(updatedChats);
+                    }
+                  } catch (error) {
+                    console.error("Error checking for title updates:", error);
+                  }
+                }, 1000); // Small delay to ensure title generation has completed
               }
 
               // Handle any errors
