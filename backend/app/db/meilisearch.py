@@ -25,8 +25,8 @@ async def init_meilisearch():
         settings.CHAT_INDEX,
         settings.MESSAGE_INDEX,
         settings.DOCUMENT_INDEX,
-        settings.VECTOR_INDEX,
         settings.MODEL_INDEX,
+        settings.CHUNK_INDEX,
         settings.STREAM_SESSIONS_INDEX,
     ]
 
@@ -61,7 +61,7 @@ async def init_meilisearch():
                 )
             elif index_name == settings.DOCUMENT_INDEX:
                 await meilisearch_client.index(index_name).update_filterable_attributes(
-                    ["id", "title", "content"]
+                    ["id", "title", "content", "user_id"]
                 )
                 await meilisearch_client.index(index_name).update_sortable_attributes(
                     ["created_at", "updated_at"]
@@ -76,6 +76,13 @@ async def init_meilisearch():
             elif index_name == settings.STREAM_SESSIONS_INDEX:
                 await meilisearch_client.index(index_name).update_filterable_attributes(
                     ["id", "user_id"]
+                )
+                await meilisearch_client.index(index_name).update_sortable_attributes(
+                    ["created_at", "updated_at"]
+                )
+            elif index_name == settings.CHUNK_INDEX:
+                await meilisearch_client.index(index_name).update_filterable_attributes(
+                    ["id", "document_id", "index_name"]
                 )
                 await meilisearch_client.index(index_name).update_sortable_attributes(
                     ["created_at", "updated_at"]

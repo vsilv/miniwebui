@@ -51,7 +51,7 @@ export const uploadDocument = async (title, file) => {
 export const deleteDocument = async (documentId) => {
   try {
     isLoadingDocuments.set(true);
-    await api.delete(`knowledge/documents/${documentId}/`);
+    await api.delete(`knowledge/documents/${documentId}`);
 
     // Update documents list
     const updatedDocs = documents.get().filter(doc => doc.id !== documentId);

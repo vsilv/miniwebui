@@ -31,7 +31,7 @@ class Settings:
     CHAT_INDEX = "chats"
     MESSAGE_INDEX = "messages"
     DOCUMENT_INDEX = "documents"
-    VECTOR_INDEX = "vectors"
+    CHUNK_INDEX = "chunks"
     MODEL_INDEX = "models"
     STREAM_SESSIONS_INDEX = "stream_sessions"
 
