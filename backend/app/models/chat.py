@@ -63,3 +63,6 @@ class StreamSession(BaseModel):
     session_id: str
     message_id: str
     created_at: int
+    
+    class Config:
+        from_attributes = True

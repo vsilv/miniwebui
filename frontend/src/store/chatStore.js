@@ -187,9 +187,12 @@ export const sendMessage = async (content, streaming = true) => {
           `/api/chat/stream/${session_id}/events`
         );
 
+        console.log("eventSource created")
+
         // Handle new content chunks
         eventSource.onmessage = (event) => {
           try {
+            console.log(event)
             const data = JSON.parse(event.data);
             const content = data.content || "";
             const isDone = data.done || false;

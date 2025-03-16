@@ -40,6 +40,7 @@ class ModelList(BaseModel):
 
 class CompletionRequest(BaseModel):
     model: str
+    session_id: str
     messages: List[Dict[str, str]]
     temperature: Optional[float] = 0.7
     max_tokens: Optional[int] = None
