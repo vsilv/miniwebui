@@ -197,10 +197,17 @@ async def start_message_stream(
     """
     message = request.message
     regenerate = request.regenerate
+    assistant_message_id = request.assistant_message_id  # Get the client-generated assistant message ID
+    
     print("regenerate", regenerate)
+    print("message ID:", message.id if hasattr(message, 'id') else "No ID provided")
+    print("assistant message ID:", assistant_message_id)
+    
     session_id = str(uuid.uuid4())
-    # Generate a unique message ID for the assistant's message
-    assistant_message_id = str(uuid.uuid4())
+    
+    # If no assistant_message_id was provided, generate one
+    if not assistant_message_id:
+        assistant_message_id = str(uuid.uuid4())
 
     now = int(time.time())
 
@@ -237,39 +244,68 @@ async def start_message_stream(
 
         chat = Chat(**chat_result.hits[0])
 
-        # Add the user message
-        message_id = str(uuid.uuid4())
-
-        user_message = {
-            "id": message_id,
+        # Get all previous messages for context
+        messages_result = await client.index(settings.MESSAGE_INDEX).search(
+            filter=f"chat_id = {chat_id}", sort=["created_at:asc"], limit=100
+        )
+        
+        # Extract all messages
+        all_messages = messages_result.hits
+        
+        # Handle message ID if provided
+        message_id = getattr(message, 'id', None)
+        user_message_data = {
+            "id": message_id if message_id else str(uuid.uuid4()),
             "chat_id": chat_id,
             "role": message.role,
             "content": message.content,
             "created_at": now,
         }
-        # Get all previous messages for context
-        messages_result = await client.index(settings.MESSAGE_INDEX).search(
-            filter=f"chat_id = {chat_id}", sort=["created_at:asc"], limit=100
-        )
+        
+        # Messages for completion API
+        messages_for_completion = []
+        
+        if regenerate:
+            # If regenerating, we need to find all messages before the specified message ID
+            if message_id:
+                # Keep messages that occurred before the specified message
+                filtered_messages = []
+                for msg in all_messages:
+                    if msg["id"] == message_id:
+                        # Include the user message we're regenerating from
+                        filtered_messages.append(msg)
+                        break  # Stop after this message
+                    filtered_messages.append(msg)
+                
+                # Convert to expected format for the completion API
+                messages_for_completion = [
+                    {"role": msg["role"], "content": msg["content"]}
+                    for msg in filtered_messages
+                ]
+            else:
+                # If no message ID, just use the current message
+                messages_for_completion = [{"role": message.role, "content": message.content}]
+        else:
+            # For a regular message, use all existing messages plus the new one
+            messages_for_completion = [
+                {"role": msg["role"], "content": msg["content"]}
+                for msg in all_messages
+            ]
+            
+            # Add the new message to messages_for_completion
+            messages_for_completion.append(
+                {"role": message.role, "content": message.content}
+            )
+            
+            # Save the user message to the database
+            await client.index(settings.MESSAGE_INDEX).add_documents([user_message_data])
 
-        # Convert to expected format for the completion API
-        messages_for_completion = [
-            {"role": msg["role"], "content": msg["content"]}
-            for msg in messages_result.hits
-        ]
-
-        messages_for_completion.append(
-            {"role": message.role, "content": message.content}
-        )
-
-        print(messages_for_completion)
-
-        await client.index(settings.MESSAGE_INDEX).add_documents([user_message])
+        print("Messages for completion:", messages_for_completion)
 
         # Update the chat's updated_at timestamp
-        # await client.index(settings.CHAT_INDEX).update_documents(
-        #     [{"id": chat_id, "updated_at": now}]
-        # )
+        await client.index(settings.CHAT_INDEX).update_documents(
+            [{"id": chat_id, "updated_at": now}]
+        )
 
         # Create a completion request
         completion_request = CompletionRequest(
@@ -282,17 +318,11 @@ async def start_message_stream(
         # Start the streaming generation and get the session ID
         await start_streaming_completion(completion_request)
 
-        # Store session info in Redis
-        # This is a simple key-value approach that eliminates the need for Meilisearch
-
-        # Return the session info
-
     background_tasks.add_task(process, session_id, assistant_message_id)
 
     return StreamSession(
         session_id=session_id, message_id=assistant_message_id, created_at=now
     )
-
 
 @router.get("/stream/{session_id}/events")
 async def stream_chat_events(session_id: str, request: Request):

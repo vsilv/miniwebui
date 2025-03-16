@@ -11,11 +11,12 @@ class MessageBase(BaseModel):
 
 
 class MessageCreate(MessageBase):
-    pass
+    id: Optional[str] = None 
 
 class MessageStreamRequest(BaseModel): 
     message: MessageCreate
     regenerate: bool = False 
+    assistant_message_id: Optional[str] = None
 
 class Message(MessageBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

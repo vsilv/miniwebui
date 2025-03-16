@@ -15,7 +15,7 @@ export const currentChat = map({
 
 // Available models
 export const models = atom([]);
-export const selectedModel = atom("gemini-2.0-flash-lite"); // Default to Gemini 1.5 Pro
+export const selectedModel = atom("gemini-2.0-flash-lite");
 
 // Fetch all chats
 export const fetchChats = async () => {
@@ -144,6 +144,7 @@ export const fetchChat = async (chatId) => {
 
 // Update just the sendMessage function in your chatStore.js
 
+// Updated sendMessage function that generates message ID on client side
 export const sendMessage = async (content, streaming = true) => {
   const chatId = currentChat.get().id;
   if (!chatId) return null;
@@ -151,9 +152,13 @@ export const sendMessage = async (content, streaming = true) => {
   try {
     currentChat.setKey("isLoading", true);
 
+    // Generate unique IDs for both user and assistant messages
+    const userMessageId = `user-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const assistantMessageId = `assistant-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
     // Add user message locally
     const userMessage = {
-      id: `temp-${Date.now()}`,
+      id: userMessageId,
       role: "user",
       content,
       created_at: Math.floor(Date.now() / 1000), // Convert to UNIX timestamp (seconds)
@@ -166,6 +171,7 @@ export const sendMessage = async (content, streaming = true) => {
     const messageData = {
       role: "user",
       content,
+      id: userMessageId,           // Send client-generated ID
     };
 
     if (streaming) {
@@ -174,16 +180,17 @@ export const sendMessage = async (content, streaming = true) => {
         const sessionResponse = await api
           .post(`chat/${chatId}/messages/stream`, {
             json: {
-              message: messageData, // ✅ Contenu du message
+              message: messageData,
+              assistant_message_id: assistantMessageId,  // Send the assistant message ID
             },
           })
           .json();
 
-        const { session_id, message_id } = sessionResponse;
+        const { session_id } = sessionResponse;
 
         // Add placeholder for assistant's response with is_streaming flag
         const assistantMessagePlaceholder = {
-          id: message_id,
+          id: assistantMessageId,
           role: "assistant",
           content: "",
           created_at: Math.floor(Date.now() / 1000),
@@ -213,7 +220,7 @@ export const sendMessage = async (content, streaming = true) => {
             // Update message content
             const messages = currentChat.get().messages;
             const messageIndex = messages.findIndex(
-              (msg) => msg.id === message_id
+              (msg) => msg.id === assistantMessageId
             );
 
             if (messageIndex !== -1) {
@@ -263,7 +270,7 @@ export const sendMessage = async (content, streaming = true) => {
             // Mark the message as errored
             const messages = currentChat.get().messages;
             const messageIndex = messages.findIndex(
-              (msg) => msg.id === message_id
+              (msg) => msg.id === assistantMessageId
             );
 
             if (messageIndex !== -1) {
@@ -293,7 +300,7 @@ export const sendMessage = async (content, streaming = true) => {
           // Mark the message as errored
           const messages = currentChat.get().messages;
           const messageIndex = messages.findIndex(
-            (msg) => msg.id === message_id
+            (msg) => msg.id === assistantMessageId
           );
 
           if (messageIndex !== -1) {
@@ -316,7 +323,7 @@ export const sendMessage = async (content, streaming = true) => {
           currentChat.setKey("isLoading", false);
         };
 
-        return message_id;
+        return assistantMessageId;
       } catch (error) {
         console.error("Error initiating stream:", error);
 

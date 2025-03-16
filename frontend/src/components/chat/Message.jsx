@@ -28,176 +28,184 @@ const Message = ({ message }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Regenerate response - completely rewritten to fix duplication issues
-  const regenerateResponse = async () => {
-    console.log("Regenerate response for message:", message.id);
+  // Regenerate response - fixed to properly handle regeneration
+// Regenerate response - properly removes the message and all subsequent messages
+// Regenerate response with client-side message ID generation
+const regenerateResponse = async () => {
+  console.log("Regenerate response for message:", message.id);
 
-    if (isRegenerating) return;
+  if (isRegenerating) return;
+
+  try {
+    setIsRegenerating(true);
+
+    // Get all messages
+    const messages = currentChat.get().messages;
+    const assistantIndex = messages.findIndex((msg) => msg.id === message.id);
+
+    if (assistantIndex <= 0) {
+      throw new Error("Cannot find preceding user message");
+    }
+
+    // Look for the most recent user message before this assistant message
+    let userMessageIndex = assistantIndex - 1;
+    while (
+      userMessageIndex >= 0 &&
+      messages[userMessageIndex].role !== "user"
+    ) {
+      userMessageIndex--;
+    }
+
+    if (userMessageIndex < 0) {
+      throw new Error("No user message found to regenerate from");
+    }
+
+    const userMessage = messages[userMessageIndex];
+    const chatId = currentChat.get().id;
+
+    // Generate a new ID for the regenerated assistant message
+    const newAssistantMessageId = `assistant-regen-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+    // Important: Only keep messages up to the assistant message we're regenerating
+    const updatedMessages = messages.filter((msg, index) => index < assistantIndex);
+    currentChat.setKey("messages", updatedMessages);
+
+    // Set loading state
+    currentChat.setKey("isLoading", true);
 
     try {
-      setIsRegenerating(true);
-
-      // Get all messages
-      const messages = currentChat.get().messages;
-      const assistantIndex = messages.findIndex((msg) => msg.id === message.id);
-
-      if (assistantIndex <= 0) {
-        throw new Error("Cannot find preceding user message");
-      }
-
-      // Look for the most recent user message before this assistant message
-      let userMessageIndex = assistantIndex - 1;
-      while (
-        userMessageIndex >= 0 &&
-        messages[userMessageIndex].role !== "user"
-      ) {
-        userMessageIndex--;
-      }
-
-      if (userMessageIndex < 0) {
-        throw new Error("No user message found to regenerate from");
-      }
-
-      const userMessage = messages[userMessageIndex];
-      const chatId = currentChat.get().id;
-
-      // Remove this message but keep all preceding messages including the user message
-      const updatedMessages = messages.filter(
-        (_, index) => index < assistantIndex
-      );
-      currentChat.setKey("messages", updatedMessages);
-
-      // Set loading state
-      currentChat.setKey("isLoading", true);
-
-      try {
-        // Get fresh session ID for streaming
-        const sessionResponse = await api
-          .post(`chat/${chatId}/messages/stream`, {
-            json: {
-              message: { role: "user", content: userMessage.content }, // ✅ Contenu du message
-              regenerate: true,  // ✅ Maintenant inclus dans le body
+      // Get fresh session ID for streaming with the new message ID
+      const sessionResponse = await api
+        .post(`chat/${chatId}/messages/stream`, {
+          json: {
+            message: { 
+              role: "user", 
+              content: userMessage.content,
+              id: userMessage.id  // Use the original user message ID
             },
-          })
-          .json();
+            assistant_message_id: newAssistantMessageId,  // Send the new assistant message ID
+            regenerate: true  // Flag this as a regeneration request
+          },
+        })
+        .json();
 
-        const { session_id, message_id } = sessionResponse;
+      const { session_id } = sessionResponse;
 
-        // Add placeholder for the new assistant response
-        const assistantPlaceholder = {
-          id: message_id,
-          role: "assistant",
-          content: "",
-          created_at: Math.floor(Date.now() / 1000),
-          is_streaming: true,
-        };
+      // Add placeholder for the new assistant response
+      const assistantPlaceholder = {
+        id: newAssistantMessageId,
+        role: "assistant",
+        content: "",
+        created_at: Math.floor(Date.now() / 1000),
+        is_streaming: true,
+      };
 
-        // Update the messages with the placeholder
-        currentChat.setKey("messages", [
-          ...updatedMessages,
-          assistantPlaceholder,
-        ]);
+      // Update the messages with the placeholder
+      currentChat.setKey("messages", [
+        ...updatedMessages,
+        assistantPlaceholder,
+      ]);
 
-        // Set up event source for streaming
-        const eventSource = new EventSource(
-          `/api/chat/stream/${session_id}/events`
-        );
+      // Set up event source for streaming
+      const eventSource = new EventSource(
+        `/api/chat/stream/${session_id}/events`
+      );
 
-        // Handle streamed content
-        eventSource.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            const content = data.content || "";
-            const isDone = data.done || false;
-            const error = data.error;
+      // Handle streamed content
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          const content = data.content || "";
+          const isDone = data.done || false;
+          const error = data.error;
 
-            // Update message content
-            const currentMessages = currentChat.get().messages;
-            const messageIndex = currentMessages.findIndex(
-              (msg) => msg.id === message_id
-            );
-
-            if (messageIndex !== -1) {
-              const updatedMessage = {
-                ...currentMessages[messageIndex],
-                content: currentMessages[messageIndex].content + content,
-              };
-
-              if (isDone) {
-                updatedMessage.is_streaming = false;
-              }
-
-              if (error) {
-                updatedMessage.error = true;
-                updatedMessage.is_streaming = false;
-              }
-
-              const newMessages = [...currentMessages];
-              newMessages[messageIndex] = updatedMessage;
-
-              currentChat.setKey("messages", newMessages);
-            }
-
-            if (isDone || error) {
-              eventSource.close();
-              currentChat.setKey("isLoading", false);
-            }
-          } catch (e) {
-            console.error("Error in SSE:", e);
-            eventSource.close();
-            currentChat.setKey("isLoading", false);
-          }
-        };
-
-        // Handle SSE errors
-        eventSource.onerror = (error) => {
-          console.error("SSE error:", error);
-          eventSource.close();
-          currentChat.setKey("isLoading", false);
-
-          // Update the message to show error
+          // Update message content
           const currentMessages = currentChat.get().messages;
           const messageIndex = currentMessages.findIndex(
-            (msg) => msg.id === message_id
+            (msg) => msg.id === newAssistantMessageId
           );
 
           if (messageIndex !== -1) {
             const updatedMessage = {
               ...currentMessages[messageIndex],
-              error: true,
-              is_streaming: false,
-              content:
-                currentMessages[messageIndex].content ||
-                "Une erreur de connexion s'est produite",
+              content: currentMessages[messageIndex].content + content,
             };
+
+            if (isDone) {
+              updatedMessage.is_streaming = false;
+            }
+
+            if (error) {
+              updatedMessage.error = true;
+              updatedMessage.is_streaming = false;
+            }
 
             const newMessages = [...currentMessages];
             newMessages[messageIndex] = updatedMessage;
 
             currentChat.setKey("messages", newMessages);
           }
-        };
-      } catch (error) {
-        console.error("Error initiating regeneration:", error);
+
+          if (isDone || error) {
+            eventSource.close();
+            currentChat.setKey("isLoading", false);
+          }
+        } catch (e) {
+          console.error("Error in SSE:", e);
+          eventSource.close();
+          currentChat.setKey("isLoading", false);
+        }
+      };
+
+      // Handle SSE errors
+      eventSource.onerror = (error) => {
+        console.error("SSE error:", error);
+        eventSource.close();
         currentChat.setKey("isLoading", false);
 
-        // Add an error message
-        const errorMessage = {
-          id: `error-${Date.now()}`,
-          role: "assistant",
-          content: "Impossible de régénérer la réponse. Veuillez réessayer.",
-          created_at: Math.floor(Date.now() / 1000),
-          error: true,
-        };
+        // Update the message to show error
+        const currentMessages = currentChat.get().messages;
+        const messageIndex = currentMessages.findIndex(
+          (msg) => msg.id === newAssistantMessageId
+        );
 
-        currentChat.setKey("messages", [...updatedMessages, errorMessage]);
-      }
+        if (messageIndex !== -1) {
+          const updatedMessage = {
+            ...currentMessages[messageIndex],
+            error: true,
+            is_streaming: false,
+            content:
+              currentMessages[messageIndex].content ||
+              "Une erreur de connexion s'est produite",
+          };
+
+          const newMessages = [...currentMessages];
+          newMessages[messageIndex] = updatedMessage;
+
+          currentChat.setKey("messages", newMessages);
+        }
+      };
     } catch (error) {
-      console.error("Error regenerating message:", error);
-    } finally {
-      setIsRegenerating(false);
+      console.error("Error initiating regeneration:", error);
+      currentChat.setKey("isLoading", false);
+
+      // Add an error message
+      const errorMessage = {
+        id: `error-${Date.now()}`,
+        role: "assistant",
+        content: "Impossible de régénérer la réponse. Veuillez réessayer.",
+        created_at: Math.floor(Date.now() / 1000),
+        error: true,
+      };
+
+      currentChat.setKey("messages", [...updatedMessages, errorMessage]);
     }
-  };
+  } catch (error) {
+    console.error("Error regenerating message:", error);
+  } finally {
+    setIsRegenerating(false);
+  }
+};
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} px-4`}>
