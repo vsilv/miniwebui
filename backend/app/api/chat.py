@@ -314,9 +314,6 @@ async def stream_chat_events(session_id: str, request: Request):
         f"Starting SSE stream for session {session_id}, message {message_id}, chat {chat_id}"
     )
 
-    # Check for client disconnect
-    # disconnect = asyncio.create_task(request.is_disconnected())
-
     # Define the SSE streaming response generator
     async def sse_generator():
         full_content = ""
@@ -328,10 +325,7 @@ async def stream_chat_events(session_id: str, request: Request):
 
             # Stream messages from Redis Stream
             async for event in read_stream_messages(session_id, last_id):
-                # Check for disconnection
-                # if disconnect.done():
-                #     print("Client disconnected")
-                #     break
+
 
                 # Extract data from the event
                 event_type = event.get("type")
