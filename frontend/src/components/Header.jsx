@@ -12,7 +12,9 @@ import {
   Sun,
   Moon,
   HelpCircle,
-  Search
+  Search,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { user, logout } from '../store/authStore';
 import Logo from './Logo';
@@ -22,7 +24,8 @@ const Header = ({
   darkMode, 
   onDarkModeToggle,
   theme,
-  onThemeChange
+  onThemeChange,
+  sidebarOpen
 }) => {
   const navigate = useNavigate();
   const $user = useStore(user);
@@ -73,10 +76,10 @@ const Header = ({
             className="mr-4 p-2 rounded-full text-dark-500 dark:text-dark-400 hover:text-dark-700 dark:hover:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-700 focus:outline-none transition-colors"
             aria-label="Toggle sidebar"
           >
-            <Menu size={22} />
+            {sidebarOpen ? <ChevronLeft size={22} /> : <ChevronRight size={22} />}
           </button>
           
-          <Logo variant="full" size="sm" />
+     
 
           {/* Global search */}
           <div ref={searchRef} className="hidden md:block ml-8 relative">

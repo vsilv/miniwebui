@@ -1,7 +1,8 @@
+// src/hooks/useChat.js - Mise à jour
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { createChat } from "../store/chatStore";
+import { createChat, chats } from "../store/chatStore";
 
 export function useChat() {
   const navigate = useNavigate();
@@ -16,9 +17,12 @@ export function useChat() {
       // Create chat but delay navigation until we have a chat ID
       const newChat = await createChat();
       
-      // Only navigate once we have a valid chat ID
+      // Assurons-nous que le chat est déjà dans la liste avant de naviguer
       if (newChat && newChat.id) {
-        navigate(`/chat/${newChat.id}`);
+        // Attendre un court instant pour s'assurer que le store est à jour
+        setTimeout(() => {
+          navigate(`/chat/${newChat.id}`);
+        }, 50);
       } else {
         toast.error("Error creating conversation: No chat ID returned");
       }

@@ -22,7 +22,7 @@ const Messages = ({ messages, isLoading }) => {
   );
 
   return (
-    <div className="flex-1 overflow-y-auto py-6 space-y-0 divide-y divide-gray-100 dark:divide-dark-800">
+    <div className="overflow-y-auto py-6 space-y-0 divide-y divide-gray-100 dark:divide-dark-800 w-full">
       {visibleMessages.length === 0 ? (
         <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
           Commencez la conversation en envoyant un message

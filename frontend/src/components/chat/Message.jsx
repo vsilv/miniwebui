@@ -198,9 +198,8 @@ const Message = ({ message }) => {
       setIsRegenerating(false);
     }
   };
-
   return (
-    <div className={`px-4 py-4 ${isUser ? "mb-2" : "mb-4"}`}>
+    <div className={`px-2 py-4 ${isUser ? "mb-2" : "mb-4"}`}>
       {/* Message de l'utilisateur */}
       {isUser && (
         <div className="flex justify-end">
@@ -217,8 +216,8 @@ const Message = ({ message }) => {
 
       {/* Message de l'assistant */}
       {isAssistant && (
-        <div className="space-y-2 max-w-full">
-          <div className="bg-white/10 dark:bg-dark-800/10 text-dark-800 dark:text-light-200 w-full">
+        <div className="space-y-2 w-full px-1">
+          <div className="bg-white/10 dark:bg-dark-800/10 text-dark-800 dark:text-light-200 w-full">`
             {isStreaming && message.content.length === 0 ? (
               // Indicateur de saisie pour un message en streaming vide
               <div className="flex items-center space-x-2 my-2">

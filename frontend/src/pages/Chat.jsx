@@ -165,24 +165,36 @@ const Chat = () => {
     return (
       <>
         <ChatHeader />
-        <div className={`overflow-hidden flex flex-col h-full ${$currentChat.messages.length === 0 ? 'justify-center' : ''}`}>
-  <div className={`${$currentChat.messages.length > 0 ? 'flex-1 overflow-y-auto' : ''} max-w-3xl w-full mx-auto`}>
-    <Messages
-      messages={$currentChat.messages}
-      isLoading={$currentChat.isLoading}
-      messagesEndRef={messagesEndRef}
-    />
-  </div>
-  <div className="w-full max-w-3xl mx-auto">
-    <MessageInput 
-      chatId={chatId} 
-      isLoading={$currentChat.isLoading}
-      onDocumentSelect={toggleDocModal}
-      selectedDocs={selectedDocs}
-      onRemoveDoc={(docId) => setSelectedDocs(prev => prev.filter(doc => doc.id !== docId))}
-    />
-  </div>
-</div>
+        <div
+          className={`overflow-hidden flex flex-col h-full ${
+            $currentChat.messages.length === 0 ? "justify-center" : ""
+          }`}
+        >
+          <div
+            className={`${
+              $currentChat.messages.length > 0 ? "flex-1 overflow-y-auto" : ""
+            } max-w-6xl w-full mx-auto`}
+          >
+            <Messages
+              messages={$currentChat.messages}
+              isLoading={$currentChat.isLoading}
+              messagesEndRef={messagesEndRef}
+            />
+          </div>
+          <div className="w-full max-w-6xl mx-auto">
+            <MessageInput
+              chatId={chatId}
+              isLoading={$currentChat.isLoading}
+              onDocumentSelect={toggleDocModal}
+              selectedDocs={selectedDocs}
+              onRemoveDoc={(docId) =>
+                setSelectedDocs((prev) =>
+                  prev.filter((doc) => doc.id !== docId)
+                )
+              }
+            />
+          </div>
+        </div>
 
         {/* Document selection modal */}
         {showDocModal && (
